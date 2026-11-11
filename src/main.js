@@ -795,16 +795,17 @@ function rhChart(serieTodo, { id, titulo, fmt = "pct", h = 190, rotuloFim = "", 
     <svg class="rh-svg" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(titulo)}: ${f(vals[0])} em ${mesCurtoAno(serie[0][0])}, ${f(vals[vals.length - 1])} em ${mesCurtoAno(serie[serie.length - 1][0])}">
       <defs>
         <linearGradient id="${id}-ln" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--chart)" stop-opacity=".55"/><stop offset=".7" stop-color="var(--chart)"/><stop offset="1" stop-color="var(--chart-2)"/></linearGradient>
-        <linearGradient id="${id}-ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".26"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient>
-        <radialGradient id="${id}-gl"><stop offset="0" stop-color="var(--chart-2)" stop-opacity=".45"/><stop offset=".45" stop-color="var(--chart-2)" stop-opacity=".12"/><stop offset="1" stop-color="var(--chart-2)" stop-opacity="0"/></radialGradient>
+        <linearGradient id="${id}-ar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".2"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient>
+        <radialGradient id="${id}-gl"><stop offset="0" stop-color="var(--chart-2)" stop-opacity=".22"/><stop offset=".4" stop-color="var(--chart-2)" stop-opacity=".07"/><stop offset="1" stop-color="var(--chart-2)" stop-opacity="0"/></radialGradient>
+        <clipPath id="${id}-cl"><path d="${d}L${x(serie.length - 1)},${H - padB}L0,${H - padB}Z"/></clipPath>
         <filter id="${id}-bl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter>
       </defs>
-      <ellipse cx="${ex}" cy="${ey}" rx="${W * 0.28}" ry="${H * 0.55}" fill="url(#${id}-gl)"/>
+      <ellipse cx="${ex}" cy="${ey}" rx="${W * 0.2}" ry="${H * 0.5}" fill="url(#${id}-gl)" clip-path="url(#${id}-cl)"/>
       <path d="${d}L${x(serie.length - 1)},${H - padB}L0,${H - padB}Z" fill="url(#${id}-ar)"/>
       <line class="base" x1="0" x2="${W}" y1="${y(vals[0])}" y2="${y(vals[0])}"/>
       <line class="vline" x1="${ex}" x2="${ex}" y1="${ey}" y2="${H - padB}"/>
       <path class="ln" d="${d}" stroke="url(#${id}-ln)"/>
-      <circle cx="${ex}" cy="${ey}" r="9" fill="var(--chart-2)" filter="url(#${id}-bl)" opacity=".9"/>
+      <circle cx="${ex}" cy="${ey}" r="7" fill="var(--chart-2)" filter="url(#${id}-bl)" opacity=".6"/>
       <circle cx="${ex}" cy="${ey}" r="4.5" fill="var(--chart-2)"/>
       <g class="tag"><rect x="${tx}" y="2" width="${tw}" height="22" rx="11"/><text x="${tx + tw / 2}" y="17" text-anchor="middle">${esc(tag)}</text></g>
       <text class="ax" x="0" y="${H - 4}">${mesCurtoAno(serie[0][0])}</text>
