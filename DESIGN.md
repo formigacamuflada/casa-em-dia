@@ -23,7 +23,8 @@ One design, two palettes. The structure comes from the Duo Finn concept (sidebar
 - Balance: hero value, "x% do salário livre", 4-color segmented bar and legend with amounts and percentages.
 - Bills to pay: unpaid total, day pills with dots (one per bill), round check rows; the list scrolls inside the card.
 - House split: "Você paga / Ana paga", blue/pink bar with percentages and a 50% marker, "Quem paga cada conta" with person dots, Pix footer with "Marcar feito".
-- Cards: realistic face (bank color gradient, sheen, EMV chip, contactless, nickname spaced in caps, due date, available limit), horizontal carousel, next three bills. The new-card form shows a live preview and picks the color from the bank name.
+- Real card image (like Apple Pay): the person can upload a photo/image of the front of their own card, crop it to the card ratio (drag + zoom), and it becomes the card face, with only the due date (bottom left) and available limit (bottom right) over a soft bottom gradient. Stored in the private `cartoes` Storage bucket under the same visibility rules as the card; signed links are reused until near expiry. We never recreate banks' card art ourselves.
+- Cards without an image: realistic face (bank color gradient, sheen, EMV chip, contactless, nickname spaced in caps, due date, available limit), horizontal carousel, next three bills. The new-card form shows a live preview and picks the color from the bank name.
 - Housing: "Só meu salário / Salário do casal" toggle, green bar from 0 to 60% with a 30% marker (amber/orange past it), icon tiles per bill type.
 - Bill type icons (line, in a soft green tile): key (rent), building (condo), bolt (power), wifi, drop (water), flame (gas), document (taxes), cart, car, heart, book, play, piggy bank.
 
