@@ -3,6 +3,7 @@
 // apenas um token temporário, amarrado ao id do usuário (clientUserId).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { corsHeaders, http, json } from "../_shared/http.ts";
+import { webhookUrl } from "../_shared/pluggy.ts";
 
 const PLUGGY = "https://api.pluggy.ai";
 
@@ -37,9 +38,9 @@ Deno.serve(async (req) => {
     const ct = await http(`${PLUGGY}/connect_token`, {
       method: "POST",
       headers: { "content-type": "application/json", "X-API-KEY": auth.apiKey },
-      body: JSON.stringify({ itemId, options: { clientUserId: who.user.id, avoidDuplicates: true } }),
+      body: JSON.stringify({ itemId, options: { clientUserId: who.user.id, avoidDuplicates: true, webhookUrl: await webhookUrl() } }),
     });
-    return json({ ok: true, accessToken: ct.accessToken });
+    return json({ ok: true, accessToken: ct.accessToken, webhookUrl: await webhookUrl() });
   } catch (e) {
     const s = (e as { status?: number }).status;
     const msg = s === 401 || s === 403 ? "A Pluggy recusou as credenciais configuradas no servidor." : `Não foi possível iniciar a conexão: ${(e as Error).message}`;

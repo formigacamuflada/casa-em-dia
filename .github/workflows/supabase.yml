@@ -37,7 +37,7 @@ jobs:
             echo "Segredos da Pluggy ainda não cadastrados no GitHub; a sincronização dos bancos fica desligada."
           fi
       - name: Publicar funções
-        run: supabase functions deploy mercado pluggy-sync pluggy-connect-token --project-ref "$PROJECT_REF" --use-api --yes
+        run: supabase functions deploy mercado pluggy-sync pluggy-connect-token pluggy-webhook --project-ref "$PROJECT_REF" --use-api --yes
       - name: Atualizar dados do mercado
         run: |
           KEY=$(supabase projects api-keys --project-ref "$PROJECT_REF" -o json | node -e 'const k=JSON.parse(require("fs").readFileSync(0,"utf8"));const a=k.find(x=>x.name==="anon")||k.find(x=>x.type==="publishable");process.stdout.write(a?a.api_key:"")')
