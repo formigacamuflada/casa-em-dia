@@ -980,6 +980,20 @@ function spark(serie) {
     <circle class="pt" cx="${ex}" cy="${ey}" r="5" fill="var(--glow)"/><circle class="pt" cx="${ex}" cy="${ey}" r="2.8" fill="var(--chart-2)"/></svg>`;
 }
 
+/* Juro real ex-post, mês a mês: Selic do mês (anualizada) descontada do IPCA de 12 meses.
+   (1 + Selic) / (1 + IPCA) − 1 — quanto a renda fixa rendeu acima da inflação. */
+function serieJuroReal(series) {
+  const ipca = new Map(series?.ipca12m || []);
+  return (series?.selic || [])
+    .filter(([mes]) => ipca.has(mes))
+    .map(([mes, s]) => [mes, ((1 + s / 100) / (1 + ipca.get(mes) / 100) - 1) * 100]);
+}
+function statJuroReal(series) {
+  const serie = serieJuroReal(series);
+  if (!serie.length) return "";
+  const [mes, v] = serie[serie.length - 1];
+  return `<div class="stat" data-tip="Selic do mês descontada do IPCA de 12 meses: quanto a renda fixa rendeu acima da inflação"><div class="lbl">Juro real</div><div style="display:flex;align-items:center;gap:8px;justify-content:space-between"><div class="v">${pct(v, 2)}</div>${spark(serie)}</div><div class="d">Selic − IPCA · ${mesCurtoAno(mes)}</div></div>`;
+}
 function blocoMercadoResumo(span = "s4 m12 t12") {
   const m = D().mercado?.dados;
   if (!m) return `<section class="card ${span}">${cardHead("bussola", "Mercado", "Banco Central", "")}${vazio("", "Sem dados ainda", "O retrato do mercado é atualizado automaticamente uma vez por dia.")}</section>`;
@@ -990,7 +1004,7 @@ function blocoMercadoResumo(span = "s4 m12 t12") {
     <div class="stats">
       ${st("selic", "Meta Selic", (v) => pct(v, 2), m.series?.selic)}
       ${st("ipca12m", "IPCA em 12 meses", (v) => pct(v, 2), m.series?.ipca12m, ind.ipca12m ? `até ${mesCurtoAno(ind.ipca12m.data.slice(0, 7))}` : "")}
-      ${st("cdi", "CDI", (v) => pct(v, 2))}
+      ${statJuroReal(m.series)}
       ${st("dolar", "Dólar PTAX", (v) => `R$ ${num(v, 2)}`, m.series?.dolar)}
     </div>
     <p class="source">Atualizado em ${horaBR(D().mercado.atualizado_em)}</p></section>`;
