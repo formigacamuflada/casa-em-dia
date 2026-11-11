@@ -73,7 +73,7 @@ export function createApi() {
       const membros = await rows(sb.from("membros").select("*").order("vaga"));
       const mercado = await rows(sb.from("mercado").select("*").eq("id", "atual"));
       if (!membros.length) return { semCasa: true, membros: [], mercado: mercado[0] || null };
-      const [casas, contas, cartoes, metas, aportes, acertos, invest, prefs, imp, gastos, itens] = await Promise.all([
+      const [casas, contas, cartoes, metas, aportes, acertos, invest, prefs, imp, gastos, itens, avisos] = await Promise.all([
         rows(sb.from("casas").select("*")),
         rows(sb.from("contas").select("*")),
         rows(sb.from("cartoes").select("*").order("criado_em")),
@@ -85,6 +85,8 @@ export function createApi() {
         rows(sb.from("importacoes").select("*")),
         rows(sb.from("gastos_mensais").select("*").order("mes")),
         rows(sb.from("pluggy_itens").select("*").order("criado_em")),
+        // Avisos: se a migração ainda não chegou ao banco, o app segue sem o sininho.
+        sb.from("avisos").select("*").order("criado_em", { ascending: false }).limit(60).then((r) => (r.error ? [] : r.data || [])),
       ]);
       const comImagem = cartoes.filter((c) => c.imagem).map((c) => c.imagem);
       if (comImagem.length) {
@@ -109,6 +111,7 @@ export function createApi() {
         importacao: imp[0] || null,
         gastos,
         itens,
+        avisos,
         mercado: mercado[0] || null,
       };
     },
@@ -116,7 +119,7 @@ export function createApi() {
     subscribe(onChange) {
       const tabelas = [
         "membros", "casas", "contas", "cartoes", "metas", "aportes", "acertos",
-        "investimentos", "preferencias", "importacoes", "gastos_mensais", "mercado",
+        "investimentos", "preferencias", "importacoes", "gastos_mensais", "mercado", "avisos",
       ];
       let ch = sb.channel("casa-em-dia");
       for (const t of tabelas) ch = ch.on("postgres_changes", { event: "*", schema: "public", table: t }, () => onChange(t));
@@ -180,6 +183,13 @@ export function createApi() {
     },
     async marcarAcerto(row) {
       const { error } = await sb.from("acertos").upsert(row);
+      fail(error);
+    },
+    // ids: lista de avisos; sem ids, marca todos os não lidos.
+    async marcarLidos(ids) {
+      let q = sb.from("avisos").update({ lido_em: new Date().toISOString() }).is("lido_em", null);
+      if (ids) q = q.in("id", ids);
+      const { error } = await q;
       fail(error);
     },
     async desfazerAcerto(casaId, mes) {

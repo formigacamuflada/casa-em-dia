@@ -146,6 +146,116 @@ function toast(msg, err = false, acao = null) {
   toastTimer = setTimeout(() => (t.hidden = true), acao ? acao.ms || 7000 : err ? 6000 : 3000);
 }
 
+/* ---- avisos (sininho): o que a outra pessoa mudou nas coisas da casa ---- */
+const avisosVistos = new Set();
+const chaveAviso = (a) => `${a.id}|${a.criado_em}`;
+const avisosNaoLidos = () => (D()?.avisos || []).filter((a) => !a.lido_em);
+function mesAviso(ym) {
+  if (!ym) return "";
+  const t = mesNome(ym).toLowerCase();
+  return ym.slice(0, 4) === curYM().slice(0, 4) ? t.split(" de ")[0] : t;
+}
+function tempoAviso(iso) {
+  const d = new Date(iso);
+  const min = Math.round((Date.now() - d.getTime()) / 60000);
+  const hora = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const hoje = new Date();
+  const ontem = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() - 1);
+  if (min < 1) return "agora";
+  if (min < 60) return `há ${min} min`;
+  if (d.toDateString() === hoje.toDateString()) return `há ${Math.floor(min / 60)} h`;
+  if (d.toDateString() === ontem.toDateString()) return `ontem, ${hora}`;
+  return `${d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}, ${hora}`;
+}
+// Frase do aviso (sem o nome de quem fez). Os nomes vêm de dados guardados na hora da mudança.
+function fraseAviso(a) {
+  const d = a.dados || {};
+  const n = d.nome || "";
+  const mes = mesAviso(d.mes);
+  const cartao = a.tabela === "cartoes";
+  const v = (x) => brl(Math.abs(Number(x) || 0));
+  switch (a.acao) {
+    case "criou": return cartao ? `cadastrou o cartão da casa ${n}` : `lançou a conta da casa ${n}${d.valor != null ? ` · ${v(d.valor)}` : ""}`;
+    case "apagou": return cartao ? `apagou o cartão ${n}` : `apagou a conta ${n}`;
+    case "editou": return cartao ? `editou o cartão ${n}` : `editou a conta ${n}`;
+    case "pago":
+      if (cartao) return d.pago ? `marcou a fatura de ${mes} do ${n} como paga` : `marcou a fatura de ${mes} do ${n} como não paga`;
+      return d.pago ? `marcou ${n} como paga em ${mes}` : `marcou ${n} como não paga em ${mes}`;
+    case "valor_mes":
+      if (cartao) return d.valor == null ? `apagou a fatura de ${mes} do ${n}` : `informou a fatura de ${mes} do ${n}: ${v(d.valor)}`;
+      return d.valor == null ? `voltou ${n} ao valor mensal em ${mes}` : `mudou o valor de ${n} em ${mes} para ${v(d.valor)}`;
+    case "dividiu": return cartao ? `passou o cartão ${n} para a casa` : `passou a dividir ${n} com você`;
+    case "tirou": return cartao ? `tirou o cartão ${n} da casa` : `tirou ${n} das contas da casa`;
+    case "meta_criou": return `criou a meta ${n}`;
+    case "meta_editou": return `editou a meta ${n}`;
+    case "meta_apagou": return `apagou a meta ${n}`;
+    case "aporte": return Number(d.valor) >= 0 ? `guardou ${v(d.valor)} na meta ${d.meta}` : `tirou ${v(d.valor)} da meta ${d.meta}`;
+    case "aporte_apagou": return `apagou um aporte de ${v(d.valor)} da meta ${d.meta}`;
+    case "acerto": return `marcou o acerto de ${mes} como feito`;
+    case "acerto_desfeito": return `desfez o acerto de ${mes}`;
+    case "renda": return "atualizou a renda";
+    case "entrou": return "entrou na casa";
+    case "saiu": return "saiu da casa";
+    default: return "fez uma alteração";
+  }
+}
+const autorAviso = (a) => a.autor_nome || (a.autor_vaga ? nome(a.autor_vaga, { voce: false }) : "Alguém");
+const ROTA_AVISO = { contas: "casa", cartoes: "cartoes", metas: "investimentos", aportes: "investimentos", acertos: "casa", membros: "casa" };
+function renderSino() {
+  const btn = $("#sinoBtn");
+  if (!btn) return;
+  const n = avisosNaoLidos().length;
+  const badge = $("#sinoN");
+  badge.hidden = !n;
+  badge.textContent = n > 9 ? "9+" : String(n);
+  btn.classList.toggle("tem", n > 0);
+  btn.setAttribute("aria-label", n ? `Avisos, ${n} não ${n === 1 ? "lido" : "lidos"}` : "Avisos");
+  const pop = $("#avisosPop");
+  if (!pop.hidden) pop.innerHTML = htmlAvisos();
+}
+function htmlAvisos() {
+  const lista = D()?.avisos || [];
+  const n = avisosNaoLidos().length;
+  const quem = D()?.membros.some((m) => m.vaga === outra() && m.user_id) ? nome(outra(), { voce: false }) : "a outra pessoa";
+  const itens = lista.length
+    ? `<div class="av-list">${lista
+        .map((a) => `<button class="av-item${a.lido_em ? "" : " novo"}" data-act="aviso" data-id="${a.id}">${a.autor_vaga ? avatar(a.autor_vaga, true) : ""}<span class="av-txt"><span><b>${esc(autorAviso(a))}</b> ${esc(fraseAviso(a))}</span><small>${tempoAviso(a.criado_em)}</small></span>${a.lido_em ? "" : `<i class="av-dot"><span class="sr-only">não lido</span></i>`}</button>`)
+        .join("")}</div>`
+    : `<div class="av-vazio">${ic("sino")}<p>Nenhum aviso ainda</p><span>Quando ${esc(quem)} mudar alguma coisa da casa, aparece aqui.</span></div>`;
+  return `<div class="av-head"><strong>Avisos</strong>${n ? `<button class="link-btn" data-act="avisos-lidos">Marcar todos como lidos</button>` : ""}</div>${itens}`;
+}
+function abrirAvisos(abrir = $("#avisosPop")?.hidden) {
+  const pop = $("#avisosPop");
+  if (!pop) return;
+  if (abrir) pop.innerHTML = htmlAvisos();
+  pop.hidden = !abrir;
+  $("#sinoBtn").setAttribute("aria-expanded", String(abrir));
+  if (abrir) pop.querySelector(".av-item, .link-btn")?.focus({ preventScroll: true });
+}
+function marcarLidosLocal(ids) {
+  const agora = new Date().toISOString();
+  for (const a of S.data?.avisos || []) if (!a.lido_em && (!ids || ids.includes(a.id))) a.lido_em = agora;
+  visCache.ver = -1;
+  renderSino();
+}
+async function lerAvisos(ids) {
+  marcarLidosLocal(ids);
+  try {
+    await api.marcarLidos(ids);
+  } catch (e) {
+    toast(erroMsg(e), true);
+    reload();
+  }
+}
+// Avisos que chegaram com o app aberto: um aviso curto embaixo, com "Ver".
+function avisarNovos(antes) {
+  const novos = (D()?.avisos || []).filter((a) => !a.lido_em && !antes.has(chaveAviso(a)));
+  for (const a of D()?.avisos || []) avisosVistos.add(chaveAviso(a));
+  if (!novos.length) return;
+  const msg = novos.length === 1 ? `${autorAviso(novos[0])} ${fraseAviso(novos[0])}.` : `${autorAviso(novos[0])} fez ${novos.length} alterações.`;
+  toast(msg, false, { label: "Ver", ms: 6000, fn: () => abrirAvisos(true) });
+}
+
 /* ---- apagar com Desfazer: o item some na hora e só é apagado no banco depois do prazo ---- */
 const DESFAZER_MS = 7000;
 const DADOS_DA_TABELA = { contas: "contas", cartoes: "cartoes", metas: "metas", investimentos: "invest" };
@@ -263,6 +373,7 @@ async function start() {
     renderFatal(erroMsg(e));
     return;
   }
+  for (const a of S.data?.avisos || []) avisosVistos.add(chaveAviso(a));
   await fimDaAbertura(inicio);
   if (S.data.semCasa) {
     renderOnboarding();
@@ -291,6 +402,7 @@ async function reload() {
     S.data = d;
     if (!tinhaShell) renderShell();
     render();
+    avisarNovos(new Set(avisosVistos));
   } catch (e) {
     console.error(e);
   }
@@ -481,6 +593,10 @@ function renderShell() {
         <div class="top-right">
           <button class="icon-btn only-compact" data-act="tema-troca" aria-label="Trocar tema">${ic(temaAtual() === "escuro" ? "sol" : "lua")}</button>
           <a class="icon-btn only-compact" href="#ajustes" aria-label="Ajustes">${ic("ajustes")}</a>
+          <div class="sino-wrap">
+            <button class="icon-btn sino" id="sinoBtn" data-act="avisos" aria-label="Avisos" aria-haspopup="dialog" aria-expanded="false" aria-controls="avisosPop">${ic("sino")}<span class="sino-n" id="sinoN" hidden></span></button>
+            <div class="avisos-pop" id="avisosPop" role="dialog" aria-label="Avisos" hidden></div>
+          </div>
           <button class="btn btn-primary lancar" data-act="lancar" aria-label="Lançar">${ic("mais")}<span class="btn-label">Lançar</span></button>
         </div>
       </div></header>
@@ -595,6 +711,7 @@ function render() {
     ? `<a class="me-card" href="#ajustes">${avatar(me.vaga)}<div class="who"><strong>${esc(nome(me.vaga, { voce: false }))}</strong><span class="${junta ? "ok" : "pend"}"><i></i>${junta ? "Casa compartilhada" : "Aguardando a outra pessoa"}</span></div></a>`
     : "";
   aplicarTema(temaSalvo() || null);
+  renderSino();
   const pages = { inicio: pInicio, casa: pCasa, minhas: pMinhas, cartoes: pCartoes, investimentos: pInvest, ajustes: pAjustes };
   $("#main").innerHTML = `<div class="page">${pages[S.route]()}</div>`;
   document.title = S.route === "inicio" ? "Casa em Dia" : `${{ casa: "Casa", minhas: "Minhas contas", cartoes: "Cartões", investimentos: "Investimentos", ajustes: "Ajustes" }[S.route]} · Casa em Dia`;
@@ -1290,7 +1407,8 @@ function pAjustes() {
       </ul></section>
     <section class="card s6 t12">${cardHead("pote", "Meus valores", "", "")}
       <dl class="kv"><dt>Minha renda (os dois veem)</dt><dd>${me?.renda != null ? brl(me.renda) : "—"} <button class="link-btn" data-act="renda" data-vaga="${me?.vaga}">editar</button></dd>
-      <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
+      <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd>
+      <dt class="only-compact">Tema</dt><dd class="only-compact"><div class="tema-ctl" role="group" aria-label="Tema"><button data-act="tema" data-v="claro" aria-label="Claro" aria-pressed="${temaAtual() === "claro"}">${ic("sol", "sm")}</button><button data-act="tema" data-v="escuro" aria-label="Escuro" aria-pressed="${temaAtual() === "escuro"}">${ic("lua", "sm")}</button></div></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
       ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
@@ -1830,6 +1948,19 @@ document.addEventListener("click", async (e) => {
     case "mes-prox": S.month = addYM(S.month, 1); return render();
     case "mes-hoje": S.month = curYM(); return render();
     case "filtro": S.filtro = t.dataset.v; return render();
+    case "avisos": e.stopPropagation(); return abrirAvisos();
+    case "avisos-lidos": return lerAvisos(null);
+    case "aviso": {
+      const a = (D().avisos || []).find((x) => x.id === id);
+      abrirAvisos(false);
+      if (!a) return;
+      if (!a.lido_em) lerAvisos([id]);
+      if (a.dados?.mes && /^\d{4}-\d{2}$/.test(a.dados.mes)) S.month = a.dados.mes;
+      const rota = ROTA_AVISO[a.tabela] || "inicio";
+      if (location.hash !== `#${rota}`) location.hash = rota;
+      else render();
+      return;
+    }
     case "lancar": return formConta({ escopo: { minhas: "pessoal", casa: "casa" }[S.route] || null });
     case "nova-conta": return formConta({ escopo: t.dataset.escopo });
     case "edit-conta": return formConta({ id });
@@ -1904,7 +2035,17 @@ document.addEventListener("change", async (e) => {
   if (!ok) t.checked = !t.checked;
   t.disabled = false;
 });
+document.addEventListener("click", (e) => {
+  const pop = $("#avisosPop");
+  if (pop && !pop.hidden && !e.target.closest?.(".sino-wrap, .toast")) abrirAvisos(false);
+});
 document.addEventListener("keydown", (e) => {
+  const pop = $("#avisosPop");
+  if (e.key === "Escape" && pop && !pop.hidden) {
+    abrirAvisos(false);
+    $("#sinoBtn")?.focus();
+    return;
+  }
   if (e.target.closest?.("input, textarea, select, dialog")) return;
   if (!$("#main")) return;
   if (e.key === "ArrowLeft" && e.altKey) { S.month = addYM(S.month, -1); render(); }

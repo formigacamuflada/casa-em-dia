@@ -2339,3 +2339,171 @@ dialog.sheet {
 .esc-aviso:empty {
   display: none;
 }
+
+/* ---- sininho de avisos (ao lado do Lançar) ---- */
+.top-in {
+  position: relative;
+}
+.sino-wrap {
+  position: relative;
+}
+.icon-btn.sino {
+  position: relative;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.icon-btn.sino.tem {
+  color: var(--text);
+}
+.sino-n {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 19px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.avisos-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 40;
+  width: 380px;
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+  animation: avisos-in 0.18s ease-out;
+}
+@keyframes avisos-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+.av-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 10px;
+}
+.av-head strong {
+  font-size: 16px;
+}
+.av-head .link-btn {
+  font-size: 13px;
+}
+.av-list {
+  overflow-y: auto;
+  padding: 0 8px 8px;
+}
+.av-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: left;
+  cursor: pointer;
+}
+.av-item:hover,
+.av-item:focus-visible {
+  background: var(--surface-2);
+}
+.av-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.av-item.novo {
+  color: var(--text);
+}
+.av-item b {
+  font-weight: 650;
+  color: var(--text);
+}
+.av-item .av {
+  flex: none;
+  margin-top: 1px;
+}
+.av-txt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.av-txt small {
+  font-size: 12px;
+  color: var(--text-3);
+}
+.av-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.av-vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 28px 30px;
+  text-align: center;
+  color: var(--text-2);
+  font-size: 14px;
+}
+.av-vazio .i {
+  width: 28px;
+  height: 28px;
+  color: var(--text-3);
+  margin-bottom: 4px;
+}
+.av-vazio p {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text);
+}
+@media (max-width: 720px) {
+  .sino-wrap {
+    position: static;
+  }
+  .avisos-pop {
+    left: 0;
+    right: 0;
+    width: auto;
+    top: calc(100% + 8px);
+  }
+}
+/* Celular estreito: o tema sai do topo (fica em Ajustes) para caber o sininho. */
+@media (max-width: 480px) {
+  .top-right [data-act="tema-troca"] {
+    display: none;
+  }
+}
+.kv dd > .tema-ctl {
+  display: inline-flex;
+  width: auto;
+}

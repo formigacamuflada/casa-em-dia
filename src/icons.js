@@ -11,6 +11,7 @@ const P = {
   cadeado: '<rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
   pessoas:
     '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M15.5 5.8a3 3 0 0 1 0 5.4"/><path d="M17 14.2a5.5 5.5 0 0 1 3.5 4.8"/>',
+  sino: '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
   esq: '<path d="M14.5 6 8.5 12l6 6"/>',
   dir: '<path d="M9.5 6l6 6-6 6"/>',
   mais: '<path d="M12 5v14M5 12h14"/>',
