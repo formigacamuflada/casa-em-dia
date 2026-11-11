@@ -17,6 +17,9 @@
   --pb: #b97515;
   --pa-soft: #ddf1f0;
   --pb-soft: #f6ead9;
+  --pa-av: #087572;
+  --pb-av: #8f5a10;
+  --on-person: #ffffff;
   --danger: #b42f23;
   --danger-soft: #fbe9e6;
   --warn: #a14a08;
@@ -52,6 +55,9 @@
     --pb: #c0851f;
     --pa-soft: #143331;
     --pb-soft: #3a2a12;
+    --pa-av: #25a39b;
+    --pb-av: #c0851f;
+    --on-person: #0c1214;
     --danger: #f08a78;
     --danger-soft: #3a1c18;
     --warn: #f2b45a;
@@ -657,10 +663,10 @@ main {
   font-size: 12px;
   font-weight: 650;
   flex: none;
-  color: #fff;
+  color: var(--on-person);
 }
-.av.a { background: var(--pa); }
-.av.b { background: var(--pb); }
+.av.a { background: var(--pa-av); }
+.av.b { background: var(--pb-av); }
 .av.sm {
   width: 22px;
   height: 22px;
