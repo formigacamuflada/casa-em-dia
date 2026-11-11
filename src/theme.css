@@ -1791,3 +1791,19 @@ dialog.sheet {
   position: relative;
   z-index: 1;
 }
+
+/* ---- logo ---- */
+.brand-logo {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+.brand-logo .lg-a { fill: #00c805; }
+.brand-logo .lg-b { fill: #b6ef00; }
+.brand-logo .lg-l { fill: var(--text); }
+.brand-logo .lg-c { fill: var(--surface); }
+:root[data-tema="escuro"] .brand-logo .lg-b { fill: #ccff00; }
+.auth-brand .brand-logo {
+  width: 44px;
+  height: 44px;
+}

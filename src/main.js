@@ -240,7 +240,9 @@ function renderFatal(msg) {
   document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand">${brandMark()}<h1>Casa em Dia</h1></div><div class="banner err">${ic("alerta")}<div class="grow">${esc(msg)}</div><button class="btn btn-sm" id="retry">Tentar de novo</button></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
   $("#retry").onclick = start;
 }
-const brandMark = () => `<span class="brand-mark">${ic("casa")}</span>`;
+// Logo: dois círculos (um para cada pessoa) que se cruzam formando a casa. Cores seguem o tema.
+const brandMark = () =>
+  `<svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true"><circle class="lg-a" cx="24" cy="32" r="18"/><circle class="lg-b" cx="40" cy="32" r="18"/><path class="lg-l" d="M32 15.88A18 18 0 0 1 32 48.12A18 18 0 0 1 32 15.88Z"/><path class="lg-c" d="M32 22.5L39.5 29.5V41H24.5V29.5Z"/><path class="lg-l" d="M30 41V35.5H34V41Z"/></svg>`;
 
 function renderAuth(modo) {
   document.body.classList.add("is-auth");
