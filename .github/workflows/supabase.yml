@@ -32,12 +32,12 @@ jobs:
           PLUGGY_CLIENT_SECRET: ${{ secrets.PLUGGY_CLIENT_SECRET }}
         run: |
           if [ -n "$PLUGGY_CLIENT_ID" ] && [ -n "$PLUGGY_CLIENT_SECRET" ]; then
-            supabase secrets set --project-ref "$PROJECT_REF" PLUGGY_CLIENT_ID="$PLUGGY_CLIENT_ID" PLUGGY_CLIENT_SECRET="$PLUGGY_CLIENT_SECRET"
+            supabase secrets set --yes --project-ref "$PROJECT_REF" PLUGGY_CLIENT_ID="$PLUGGY_CLIENT_ID" PLUGGY_CLIENT_SECRET="$PLUGGY_CLIENT_SECRET"
           else
             echo "Segredos da Pluggy ainda não cadastrados no GitHub; a sincronização dos bancos fica desligada."
           fi
       - name: Publicar funções
-        run: supabase functions deploy mercado pluggy-sync --project-ref "$PROJECT_REF" --use-api
+        run: supabase functions deploy mercado pluggy-sync --project-ref "$PROJECT_REF" --use-api --yes
       - name: Atualizar dados do mercado
         run: |
           KEY=$(supabase projects api-keys --project-ref "$PROJECT_REF" -o json | node -e 'const k=JSON.parse(require("fs").readFileSync(0,"utf8"));const a=k.find(x=>x.name==="anon")||k.find(x=>x.type==="publishable");process.stdout.write(a?a.api_key:"")')
