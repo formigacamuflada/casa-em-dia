@@ -315,7 +315,7 @@ function renderOnboarding() {
     <p class="muted">Um de vocês cria a casa. O outro entra com o código de convite que aparece em Ajustes.</p>
     <div class="onb-grid">
       <form class="card" id="fCriar">
-        <div class="card-head"><img class="ill" src="${img("sofa")}" alt="" width="44" height="44"><div class="grow"><h2>Criar a casa</h2><p class="sub">Você será a pessoa 1</p></div></div>
+        <div class="card-head"><img class="ill" src="${img("casa")}" alt="" width="44" height="44"><div class="grow"><h2>Criar a casa</h2><p class="sub">Você será a pessoa 1</p></div></div>
         <div class="field"><label for="apA">Como quer ser chamado?</label><input class="inp" id="apA" maxlength="40" placeholder="Ex.: João" required></div>
         <button class="btn btn-primary" type="submit">Criar a casa</button>
       </form>
@@ -467,8 +467,8 @@ const tileIcon = (nomeConta, cat, extra = "") => `<span class="ico-tile ${extra}
 
 /* ---- ilustrações 3D (um nome por função; troca de arquivo em um lugar só) ---- */
 const ILL = {
-  carteira: "pote", calendario: "envelope", balanca: "canecas", cartoes: "cartoes", casa: "sofa", cofre: "pote",
-  grafico: "planta", bussola: "bussola", cadeado: "cadeado", canecas: "canecas", recibo: "envelope", alvo: "alvo",
+  carteira: "carteira", calendario: "calendario", balanca: "balanca", cartoes: "cartoes", casa: "casa", cofre: "cofre",
+  grafico: "grafico", bussola: "bussola", cadeado: "cadeado", canecas: "canecas", recibo: "recibo", alvo: "alvo",
 };
 const ill3d = (k, size = 64) => `<img class="ill3d" src="${img(ILL[k] || k)}" alt="" width="${size}" height="${size}" loading="lazy">`;
 
@@ -894,7 +894,7 @@ function pCasa() {
   const total = sum(itens.map((i) => i.valorMes));
   const lista = itens.length
     ? `<div class="bills">${itens.map((i) => linhaConta(i)).join("")}</div><div class="list-foot"><span class="muted">${itens.filter((i) => i.pago).length} de ${itens.length} pagas</span><strong class="num">${brl(total)}</strong></div>`
-    : vazio("envelope", "Nenhuma conta da casa neste mês", "Aluguel, condomínio, luz, internet, mercado: tudo o que é dos dois entra aqui, com quem paga cada conta.", `<button class="btn btn-primary btn-sm" data-act="nova-conta" data-escopo="casa">Nova conta da casa</button>`);
+    : vazio("recibo", "Nenhuma conta da casa neste mês", "Aluguel, condomínio, luz, internet, mercado: tudo o que é dos dois entra aqui, com quem paga cada conta.", `<button class="btn btn-primary btn-sm" data-act="nova-conta" data-escopo="casa">Nova conta da casa</button>`);
   const hist = historicoMoradia(D(), S.month);
   const maxH = Math.max(...hist.map((h) => h[1]), 1);
   return `${pageHead("Nossa casa", "Tudo nesta página é visto pelos dois.", `<button class="btn btn-primary" data-act="nova-conta" data-escopo="casa">${ic("mais", "sm")}Nova conta da casa</button>`)}

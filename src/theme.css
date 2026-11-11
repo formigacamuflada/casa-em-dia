@@ -424,7 +424,7 @@ img.ill3d {
   height: 64px;
   object-fit: contain;
   margin: -12px -10px -26px 0;
-  filter: drop-shadow(0 10px 14px rgba(0, 120, 20, 0.18));
+  filter: drop-shadow(0 8px 16px rgba(0, 200, 5, 0.22));
 }
 .ctop img.ill3d[width="52"] {
   width: 52px;
@@ -624,7 +624,7 @@ img.ill3d {
 /* a lista de contas acompanha a altura do saldo e rola por dentro */
 .dash > .c-contas {
   contain: size;
-  min-height: 380px;
+  min-height: 440px;
 }
 .c-saldo {
   justify-content: space-between;
