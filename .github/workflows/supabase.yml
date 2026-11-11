@@ -1,0 +1,44 @@
+name: Supabase (banco e funções)
+
+on:
+  push:
+    branches: [main]
+    paths: ["supabase/**", ".github/workflows/supabase.yml"]
+  workflow_dispatch:
+
+concurrency: supabase-deploy
+
+env:
+  PROJECT_REF: dxizuewsqkymogbeanlh
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Conectar ao projeto
+        run: supabase link --project-ref "$PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
+      - name: Aplicar migrações do banco
+        run: supabase db push -p "$SUPABASE_DB_PASSWORD" --include-all
+      - name: Segredos da Pluggy (se existirem)
+        env:
+          PLUGGY_CLIENT_ID: ${{ secrets.PLUGGY_CLIENT_ID }}
+          PLUGGY_CLIENT_SECRET: ${{ secrets.PLUGGY_CLIENT_SECRET }}
+        run: |
+          if [ -n "$PLUGGY_CLIENT_ID" ] && [ -n "$PLUGGY_CLIENT_SECRET" ]; then
+            supabase secrets set --project-ref "$PROJECT_REF" PLUGGY_CLIENT_ID="$PLUGGY_CLIENT_ID" PLUGGY_CLIENT_SECRET="$PLUGGY_CLIENT_SECRET"
+          else
+            echo "Segredos da Pluggy ainda não cadastrados no GitHub; a sincronização dos bancos fica desligada."
+          fi
+      - name: Publicar funções
+        run: supabase functions deploy mercado pluggy-sync --project-ref "$PROJECT_REF" --use-api
+      - name: Atualizar dados do mercado
+        run: |
+          KEY=$(supabase projects api-keys --project-ref "$PROJECT_REF" -o json | node -e 'const k=JSON.parse(require("fs").readFileSync(0,"utf8"));const a=k.find(x=>x.name==="anon")||k.find(x=>x.type==="publishable");process.stdout.write(a?a.api_key:"")')
+          curl -sS -X POST "https://$PROJECT_REF.supabase.co/functions/v1/mercado" -H "Authorization: Bearer $KEY" -H "apikey: $KEY" -H "content-type: application/json" -d '{"forcar":true}' || true

@@ -1,0 +1,66 @@
+{
+  "manifest_version": "0.3",
+  "name": "financas-casal",
+  "display_name": "Finanças do casal (Pluggy + Banco Central)",
+  "version": "1.0.0",
+  "description": "Lê suas contas, cartões, faturas e investimentos pelo Open Finance (Meu Pluggy) e os indicadores do Banco Central. Somente leitura.",
+  "long_description": "Extensão somente leitura para o Claude Desktop.\n\n**Open Finance (Meu Pluggy):** conexões e validade da autorização, contas e saldos, cartões (limite, fatura, fechamento e vencimento), transações, resumo de gastos por categoria e por mês sem movimentos internos, faturas de cartão e investimentos.\n\n**Banco Central:** meta Selic, CDI, IPCA do mês e em 12 meses, dólar PTAX, qualquer série do SGS, medianas da pesquisa Focus e cotações PTAX de outras moedas.\n\nNenhuma ferramenta movimenta dinheiro. As credenciais da Pluggy ficam guardadas pelo Claude Desktop e só são enviadas para api.pluggy.ai.",
+  "author": {
+    "name": "Casa em Dia"
+  },
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.js"],
+      "env": {
+        "PLUGGY_CLIENT_ID": "${user_config.pluggy_client_id}",
+        "PLUGGY_CLIENT_SECRET": "${user_config.pluggy_client_secret}",
+        "PLUGGY_ITEM_IDS": "${user_config.pluggy_item_ids}"
+      }
+    }
+  },
+  "tools": [
+    { "name": "pluggy_status", "description": "Conexões do Meu Pluggy: status, última atualização e validade da autorização" },
+    { "name": "pluggy_contas", "description": "Contas, saldos e cartões com limite, fatura, fechamento e vencimento" },
+    { "name": "pluggy_transacoes", "description": "Transações de um período em todas as contas e cartões" },
+    { "name": "pluggy_gastos_resumo", "description": "Gastos por categoria, mês e conta; maiores gastos e prováveis assinaturas" },
+    { "name": "pluggy_faturas", "description": "Faturas dos cartões de crédito" },
+    { "name": "pluggy_investimentos", "description": "Posições de investimento com saldo, aplicado e rentabilidade" },
+    { "name": "bcb_indicadores", "description": "Selic, CDI, IPCA, dólar PTAX e medianas do Focus" },
+    { "name": "bcb_serie", "description": "Qualquer série temporal do SGS do Banco Central" },
+    { "name": "bcb_focus", "description": "Expectativas do Focus por indicador e ano" },
+    { "name": "bcb_ptax", "description": "Cotação PTAX de uma moeda numa data" }
+  ],
+  "keywords": ["open finance", "pluggy", "banco central", "finanças", "selic", "ipca"],
+  "license": "MIT",
+  "privacy_policies": ["https://www.pluggy.ai/docs/politica-de-privacidade.pdf"],
+  "compatibility": {
+    "claude_desktop": ">=0.10.0",
+    "platforms": ["win32", "darwin", "linux"],
+    "runtimes": { "node": ">=18.0.0" }
+  },
+  "user_config": {
+    "pluggy_client_id": {
+      "type": "string",
+      "title": "Pluggy: Client ID",
+      "description": "Em dashboard.pluggy.ai, na linha da sua aplicação em Applications.",
+      "required": false
+    },
+    "pluggy_client_secret": {
+      "type": "string",
+      "title": "Pluggy: Client Secret",
+      "description": "Aparece uma única vez ao ser gerado na página da aplicação. Fica guardado de forma segura.",
+      "sensitive": true,
+      "required": false
+    },
+    "pluggy_item_ids": {
+      "type": "string",
+      "title": "Pluggy: Item IDs (um por banco)",
+      "description": "Em Applications → sua aplicação → Demo → Connected Items. Separe por vírgula.",
+      "required": false
+    }
+  }
+}

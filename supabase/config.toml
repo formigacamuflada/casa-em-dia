@@ -1,0 +1,8 @@
+# Configuração usada pelo Supabase CLI no GitHub Actions.
+project_id = "casa-em-dia"
+
+[functions.mercado]
+verify_jwt = true
+
+[functions.pluggy-sync]
+verify_jwt = true

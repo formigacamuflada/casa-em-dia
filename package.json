@@ -1,0 +1,20 @@
+{
+  "name": "casa-em-dia",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Contas da casa, divisão 50/50, cartões e investimentos do casal.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.118.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "2.12.4",
+    "vite": "7.3.7"
+  }
+}

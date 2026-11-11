@@ -1,0 +1,58 @@
+name: App web (iPhone e navegador)
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["supabase/**", "extensao-claude/**", "src-tauri/**", "*.md"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+env:
+  PROJECT_REF: dxizuewsqkymogbeanlh
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Chave pública do Supabase
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          KEY="${{ vars.VITE_SUPABASE_ANON_KEY }}"
+          if [ -z "$KEY" ]; then
+            KEY=$(supabase projects api-keys --project-ref "$PROJECT_REF" -o json | node -e 'const k=JSON.parse(require("fs").readFileSync(0,"utf8"));const a=k.find(x=>x.name==="anon")||k.find(x=>x.type==="publishable");process.stdout.write(a?a.api_key:"")')
+          fi
+          test -n "$KEY" || { echo "::error::Não consegui obter a chave pública do Supabase"; exit 1; }
+          echo "VITE_SUPABASE_ANON_KEY=$KEY" >> "$GITHUB_ENV"
+      - run: npm ci
+      - run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://${{ env.PROJECT_REF }}.supabase.co
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
