@@ -1767,3 +1767,27 @@ dialog.sheet {
 .img-pick .btn {
   cursor: pointer;
 }
+
+/* minigráficos do Mercado: a área desce até a borda do quadro e some */
+.stat {
+  position: relative;
+  overflow: hidden;
+}
+.stat > div:nth-child(2) {
+  position: static !important;
+}
+.stat svg.spark {
+  position: absolute;
+  right: 16px;
+  bottom: 0;
+  width: 46%;
+  max-width: 220px;
+  height: 78%;
+  overflow: visible;
+}
+.stat .lbl,
+.stat .v,
+.stat .d {
+  position: relative;
+  z-index: 1;
+}

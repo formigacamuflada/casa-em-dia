@@ -856,17 +856,32 @@ function rhReset(box) {
 document.addEventListener("pointermove", rhScrub);
 document.addEventListener("pointerdown", rhScrub);
 
+// Minigráfico: mesma linguagem do gráfico grande (linha em gradiente, área que some para baixo).
+let sparkN = 0;
 function spark(serie) {
   if (!serie || serie.length < 2) return "";
   const s = serie.slice(-12);
   const vals = s.map((p) => p[1]);
   const lo = Math.min(...vals);
   const hi = Math.max(...vals);
-  const W = 64;
-  const H = 26;
-  const x = (i) => 2 + (i * (W - 6)) / (s.length - 1);
-  const y = (v) => 3 + (1 - (v - lo) / (hi - lo || 1)) * (H - 6);
-  return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true" style="overflow:visible"><polyline points="${s.map((p, i) => `${x(i)},${y(p[1])}`).join(" ")}" fill="none" stroke="var(--chart)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(s.length - 1)}" cy="${y(vals[vals.length - 1])}" r="5" fill="var(--glow)"/><circle cx="${x(s.length - 1)}" cy="${y(vals[vals.length - 1])}" r="2.8" fill="var(--chart-2)"/></svg>`;
+  const W = 112;
+  const H = 52;
+  const id = `sp${++sparkN}`;
+  const x = (i) => 3 + (i * (W - 9)) / (s.length - 1);
+  const y = (v) => 5 + (1 - (v - lo) / (hi - lo || 1)) * (H * 0.55);
+  const pts = s.map((p, i) => `${x(i).toFixed(1)},${y(p[1]).toFixed(1)}`);
+  const ex = x(s.length - 1);
+  const ey = y(vals[vals.length - 1]);
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">
+    <defs>
+      <linearGradient id="${id}-l" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="var(--chart)" stop-opacity="0"/><stop offset=".3" stop-color="var(--chart)" stop-opacity=".8"/><stop offset=".75" stop-color="var(--chart)"/><stop offset="1" stop-color="var(--chart-2)"/></linearGradient>
+      <linearGradient id="${id}-a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="var(--chart)" stop-opacity=".24"/><stop offset="1" stop-color="var(--chart)" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${id}-f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff"/></linearGradient>
+      <mask id="${id}-m"><rect width="${W}" height="${H}" fill="url(#${id}-f)"/></mask>
+    </defs>
+    <path d="M${pts.join("L")}L${ex},${H}L${x(0)},${H}Z" fill="url(#${id}-a)" mask="url(#${id}-m)"/>
+    <polyline points="${pts.join(" ")}" fill="none" stroke="url(#${id}-l)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${ex}" cy="${ey}" r="5" fill="var(--glow)"/><circle cx="${ex}" cy="${ey}" r="2.8" fill="var(--chart-2)"/></svg>`;
 }
 
 function blocoMercadoResumo(span = "s4 m12 t12") {
