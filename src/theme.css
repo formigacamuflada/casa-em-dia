@@ -1858,3 +1858,64 @@ dialog.sheet {
   font-size: 12px;
   color: var(--text-3);
 }
+
+/* ---- carregamento: a marca se monta ---- */
+.loading-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+}
+.logo-anim {
+  height: 56px;
+  width: 247px;
+  overflow: visible;
+}
+.la-casa {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: la-casa 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+.la-check {
+  stroke: var(--bg);
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: la-check 0.4s 0.35s ease-out forwards;
+}
+.la-nome {
+  clip-path: inset(0 0 0 100%);
+  transform: translateX(14px);
+  animation: la-nome 0.6s 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.la-pingo {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0);
+  animation: la-pingo 0.45s 1.15s cubic-bezier(0.3, 1.6, 0.5, 1) forwards, la-pulso 1.6s 1.7s ease-in-out infinite;
+}
+@keyframes la-casa {
+  from { opacity: 0; transform: translateY(6px) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes la-check {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes la-nome {
+  to { clip-path: inset(0 0 0 0); transform: none; }
+}
+@keyframes la-pingo {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+@keyframes la-pulso {
+  0%, 100% { filter: drop-shadow(0 0 0 transparent); }
+  50% { filter: drop-shadow(0 0 6px #ccff00); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .la-casa, .la-check, .la-nome, .la-pingo {
+    animation: none;
+    clip-path: none;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,6 +1,6 @@
 import "./styles.css";
 import "./theme.css";
-import { logoCompleto, logoSimbolo } from "./logo.js";
+import { logoAnimado, logoCompleto, logoSimbolo } from "./logo.js";
 import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
@@ -235,7 +235,7 @@ async function refreshMercado() {
 
 /* ------------------------------------------------------------------ telas fora do app */
 function renderLoading() {
-  document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div><div class="skeleton" aria-label="Carregando"></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
+  document.body.innerHTML = `<div class="loading-screen" role="status"><h1 class="sr-only">Casa em Dia</h1>${logoAnimado()}<span class="sr-only">Carregando</span></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
 }
 function renderFatal(msg) {
   document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div><div class="banner err">${ic("alerta")}<div class="grow">${esc(msg)}</div><button class="btn btn-sm" id="retry">Tentar de novo</button></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
