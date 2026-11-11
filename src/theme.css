@@ -633,6 +633,17 @@ img.ill3d {
 .c-saldo .big.xl {
   font-size: 76px;
 }
+/* ícone do saldo em destaque, como a ilustração do card principal do Duo Finn */
+.c-saldo .ctop img.ill3d {
+  width: 136px;
+  height: 136px;
+  margin: -40px -16px -96px 4px;
+  filter: drop-shadow(0 14px 28px rgba(0, 200, 5, 0.28));
+}
+/* o percentual da primeira meta não encosta no porquinho */
+.c-metas .ctop img.ill3d {
+  margin-bottom: -4px;
+}
 .c-contas .todo {
   flex: 1 1 0;
   min-height: 0;
@@ -1657,6 +1668,11 @@ dialog.sheet {
   img.ill3d {
     width: 52px;
     height: 52px;
+  }
+  .c-saldo .ctop img.ill3d {
+    width: 76px;
+    height: 76px;
+    margin: -24px -10px -42px 2px;
   }
 }
 

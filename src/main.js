@@ -579,7 +579,7 @@ function blocoSobra(span = "w2") {
   const v = minhaVaga();
   const s = sobra(D(), S.month, v);
   if (s.renda === null) {
-    return `<section class="card ${span}">${cardTop("Saldo previsto", { icone: "carteira", escopo: "pessoal" })}
+    return `<section class="card ${span} c-saldo">${cardTop("Saldo previsto", { icone: "carteira", escopo: "pessoal" })}
       ${vazio("", "Informe sua renda", "Com a renda, o app mostra quanto sobra depois da sua metade da casa, das suas contas pessoais e do dia a dia.", `<button class="btn btn-primary btn-sm" data-act="renda" data-vaga="${v}">Informar renda</button>`)}</section>`;
   }
   const base = Math.max(s.renda, 1);
