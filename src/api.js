@@ -160,6 +160,20 @@ export function createApi() {
       fail(error);
       return data;
     },
+    async connectToken(itemId) {
+      const { data, error } = await sb.functions.invoke("pluggy-connect-token", { body: itemId ? { itemId } : {} });
+      if (error) {
+        let msg = error.message;
+        try {
+          const body = await error.context?.json?.();
+          if (body?.erro) msg = body.erro;
+        } catch {
+          /* mantém a mensagem original */
+        }
+        throw new Error(msg);
+      }
+      return data.accessToken;
+    },
     async sincronizarBancos() {
       const { data, error } = await sb.functions.invoke("pluggy-sync", { body: {} });
       if (error) {

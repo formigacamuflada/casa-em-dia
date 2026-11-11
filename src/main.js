@@ -738,7 +738,7 @@ function pMinhas() {
         ${(g.maiores || []).length ? `<div class="table-wrap"><table class="t"><thead><tr><th>Maiores gastos</th><th>Data</th><th class="r">Valor</th></tr></thead><tbody>${g.maiores.slice(0, 6).map((t) => `<tr><td>${esc(t.descricao)}</td><td class="faint">${dataBR(t.data)}</td><td class="r">${brl(Math.abs(t.valor))}</td></tr>`).join("")}</tbody></table></div>` : ""}
         ${(g.assinaturas || []).length ? `<div><p style="font-weight:600;font-size:14px;margin-bottom:6px">Prováveis assinaturas</p><dl class="kv">${g.assinaturas.slice(0, 6).map((a) => `<dt>${esc(a.descricao)}</dt><dd>${brl(a.valor)}</dd>`).join("")}</dl></div>` : ""}
         <p class="source">Pagamentos de fatura, transferências entre contas próprias, aplicações e resgates ficam de fora.</p>`
-        : D().itens.length ? vazio("", "Ainda sem gastos importados deste mês", "Toque em Sincronizar para buscar as transações no Meu Pluggy.") : vazio("", "Conecte seus bancos", "Cadastre os Item IDs do Meu Pluggy em Ajustes. Depois o app busca extratos, cartões e investimentos, só para você ver.", `<a class="btn btn-sm" href="#ajustes">Ir para Ajustes</a>`)}
+        : D().itens.length ? vazio("", "Ainda sem gastos importados deste mês", "Toque em Sincronizar para buscar as transações no Meu Pluggy.") : vazio("", "Conecte seus bancos", "Autorize pelo app do banco (Open Finance). O app busca extratos, cartões e investimentos, e só você vê.", `<button class="btn btn-primary btn-sm" data-act="conectar-banco">Conectar banco</button>`)}
     </section>
     <section class="card s5 m12 t12">${cardHead("pote", "Saldos nas contas", imp ? `Atualizado em ${horaBR(imp.atualizado_em)}` : "", "pessoal")}
       ${imp && (imp.contas || []).length ? `${money(saldoTotal)}<dl class="kv">${imp.contas.map((c) => `<dt>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</dt><dd>${brl(c.saldo)}</dd>`).join("")}</dl>` : `<p class="faint">Os saldos aparecem depois da primeira sincronização com o Meu Pluggy.</p>`}
@@ -887,8 +887,8 @@ function pAjustes() {
       <dl class="kv"><dt>Minha renda (os dois veem)</dt><dd>${me?.renda != null ? brl(me.renda) : "—"} <button class="link-btn" data-act="renda" data-vaga="${me?.vaga}">editar</button></dd>
       <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
-      ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Cole aqui o Item ID de cada banco conectado no Meu Pluggy (dashboard.pluggy.ai → sua aplicação → Demo → Connected Items).</p>`}
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" data-act="add-item">${ic("mais", "sm")}Adicionar Item ID</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
+      ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
@@ -1156,6 +1156,45 @@ function formItem() {
     }));
 }
 
+/* ------------------------------------------------------------------ Pluggy Connect */
+async function sincronizarAgora() {
+  S.syncing = true;
+  render();
+  try {
+    const r = await api.sincronizarBancos();
+    toast(`Sincronizado: ${r.contas} contas, ${r.cartoes} cartões, ${r.investimentos} investimentos.`);
+  } catch (err) {
+    toast(erroMsg(err), true);
+  }
+  S.syncing = false;
+  await reload();
+}
+async function conectarBanco() {
+  try {
+    toast("Abrindo a conexão com o banco…");
+    const [{ default: PluggyConnect }, token] = await Promise.all([import("pluggy-connect-sdk"), api.connectToken()]);
+    const pc = new PluggyConnect({
+      connectToken: token,
+      includeSandbox: false,
+      onSuccess: async (dados) => {
+        const item = dados?.item || dados;
+        if (!item?.id) return;
+        try {
+          if (!D().itens.some((i) => i.item_id === item.id)) await api.addItem(item.id, item.connector?.name || "Banco");
+          toast("Banco conectado. Buscando os dados…");
+          await sincronizarAgora();
+        } catch (err) {
+          toast(erroMsg(err), true);
+        }
+      },
+      onError: (err) => toast(`A conexão não foi concluída: ${err?.message || "tente de novo"}`, true),
+    });
+    await pc.init();
+  } catch (err) {
+    toast(erroMsg(err), true);
+  }
+}
+
 /* ------------------------------------------------------------------ ações */
 document.addEventListener("click", async (e) => {
   const t = e.target.closest("[data-act]");
@@ -1182,6 +1221,7 @@ document.addEventListener("click", async (e) => {
     case "novo-inv": return formInv();
     case "edit-inv": return formInv(id);
     case "add-item": return formItem();
+    case "conectar-banco": return conectarBanco();
     case "rm-item": return act(() => api.removeItem(id), "Banco removido.");
     case "ask-del": { const c = $("#confirmDel"); if (c) { c.hidden = false; c.scrollIntoView({ block: "nearest" }); } return; }
     case "cancel-del": $("#confirmDel").hidden = true; return;
@@ -1194,13 +1234,7 @@ document.addEventListener("click", async (e) => {
       try { await navigator.clipboard.writeText(t.dataset.v); toast("Código copiado."); } catch { toast(`Código: ${t.dataset.v}`); }
       return;
     case "novo-codigo": return act(() => api.novoCodigo(), "Código novo gerado. O antigo deixou de valer.");
-    case "sync":
-      S.syncing = true; render();
-      try {
-        const r = await api.sincronizarBancos();
-        toast(`Sincronizado: ${r.contas} contas, ${r.cartoes} cartões, ${r.investimentos} investimentos.`);
-      } catch (err) { toast(erroMsg(err), true); }
-      S.syncing = false; await reload(); return;
+    case "sync": return sincronizarAgora();
     case "usar-cartao": {
       const c = (D().importacao?.cartoes || []).find((x) => x.id === id);
       if (!c) return;

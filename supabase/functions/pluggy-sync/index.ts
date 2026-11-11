@@ -71,7 +71,7 @@ const TIPO: Record<string, string> = {
   SECURITY: "Previdência", COE: "COE", OTHER: "Outros",
 };
 
-async function sincronizar(itemIds: string[]) {
+async function sincronizar(itemIds: string[], userId: string) {
   const hoje = todayISO();
   const desde = `${monthOf(addDays(`${hoje.slice(0, 7)}-15`, -62))}-01`; // início de dois meses atrás
   const contas: any[] = [];
@@ -94,6 +94,11 @@ async function sincronizar(itemIds: string[]) {
       item = await pluggy(`items/${encodeURIComponent(itemId)}`);
     } catch (e) {
       falhas.push({ itemId, erro: (e as Error).message });
+      continue;
+    }
+    // Conexões feitas pelo app carregam o id de quem conectou; outra pessoa não pode usá-las.
+    if (item?.clientUserId && item.clientUserId !== userId) {
+      falhas.push({ itemId, erro: "Esta conexão pertence a outra pessoa." });
       continue;
     }
     const conexao = item?.connector?.name || null;
@@ -238,7 +243,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, erro: "Cadastre pelo menos um Item ID do Meu Pluggy em Ajustes." }, 400);
     }
 
-    const r = await sincronizar(itens.map((i) => i.item_id));
+    const r = await sincronizar(itens.map((i) => i.item_id), userId);
     const agora = new Date().toISOString();
     const { error: e1 } = await admin.from("importacoes").upsert({
       user_id: userId, atualizado_em: agora, fonte: "Meu Pluggy",

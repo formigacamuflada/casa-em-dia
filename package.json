@@ -11,7 +11,8 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.118.0"
+    "@supabase/supabase-js": "2.118.0",
+    "pluggy-connect-sdk": "2.14.2"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.4",
