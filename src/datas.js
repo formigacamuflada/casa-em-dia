@@ -25,7 +25,7 @@ function rotulo(modo, v) {
 export function campoData({ name, label, value = "", modo = "dia", min = "", placeholder = "Escolher", hint = "" }) {
   const id = `dp_${name}`;
   return `<div class="field"><span class="lab" id="${id}_l">${label}</span>
-    <div class="dp" data-modo="${modo}" data-min="${esc(min)}">
+    <div class="dpk" data-modo="${modo}" data-min="${esc(min)}">
       <input type="hidden" name="${esc(name)}" value="${esc(value)}">
       <button type="button" class="inp dp-btn" aria-haspopup="dialog" aria-expanded="false" aria-labelledby="${id}_l ${id}_v">${CAL}<span id="${id}_v" class="dp-val${value ? "" : " vazio"}">${esc(rotulo(modo, value) || placeholder)}</span></button>
       <div class="dp-pop" role="dialog" aria-label="${esc(label)}" hidden></div>
@@ -77,7 +77,7 @@ function desenhar(dp) {
 }
 
 function abrir(dp) {
-  document.querySelectorAll(".dp.aberto").forEach((o) => o !== dp && fechar(o));
+  document.querySelectorAll(".dpk.aberto").forEach((o) => o !== dp && fechar(o));
   dp.classList.add("aberto");
   delete dp.dataset.vista;
   desenhar(dp);
@@ -105,9 +105,9 @@ export function ligarDatas() {
   if (ligado) return;
   ligado = true;
   document.addEventListener("click", (e) => {
-    const dp = e.target.closest?.(".dp");
+    const dp = e.target.closest?.(".dpk");
     if (!dp) {
-      document.querySelectorAll(".dp.aberto").forEach(fechar);
+      document.querySelectorAll(".dpk.aberto").forEach(fechar);
       return;
     }
     if (e.target.closest(".dp-btn")) return dp.classList.contains("aberto") ? fechar(dp) : abrir(dp);
@@ -142,7 +142,7 @@ export function ligarDatas() {
   });
   document.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
-    const dp = document.querySelector(".dp.aberto");
+    const dp = document.querySelector(".dpk.aberto");
     if (!dp) return;
     e.stopPropagation();
     fechar(dp);

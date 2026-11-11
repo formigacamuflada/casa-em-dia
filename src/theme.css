@@ -1949,7 +1949,7 @@ dialog.sheet {
 }
 
 /* ---- seletor de data ---- */
-.dp {
+.dpk {
   position: relative;
 }
 .dp-btn {
@@ -1968,7 +1968,7 @@ dialog.sheet {
 .dp-val.vazio {
   color: var(--text-3);
 }
-.dp.aberto .dp-btn {
+.dpk.aberto .dp-btn {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -2097,4 +2097,170 @@ dialog.sheet {
   align-items: center;
   border-top: 1px solid var(--border);
   padding-top: 10px;
+}
+
+/* ---- animação de entrada do app ----
+   main.js põe .anima (+ .anima-abre ou .anima-nav) no <html> por ~3s logo
+   depois de montar a página. Cada bloco recebe --d (atraso em sequência) e os
+   itens de lista recebem --j. Na troca de página tudo fica mais curto (--t). */
+.anima-abre { --t: 1; }
+.anima-nav { --t: 0.6; }
+.anima .page .card,
+.anima .page .page-head,
+.anima .page > .banner {
+  animation: en-sobe calc(0.65s * var(--t)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes en-sobe {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+}
+
+/* títulos e ícones 3D dos blocos */
+.anima .card .ctop h2 {
+  animation: en-texto calc(0.5s * var(--t)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 120ms * var(--t));
+}
+.anima .card .big-sub,
+.anima .card .lbl-sm,
+.anima .card .sub,
+.anima .card .csub {
+  animation: en-texto calc(0.5s * var(--t)) ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 260ms * var(--t));
+}
+@keyframes en-texto {
+  from { opacity: 0; transform: translateX(-8px); }
+}
+.anima .card img.ill3d {
+  animation: en-icone calc(0.75s * var(--t)) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 180ms * var(--t));
+}
+@keyframes en-icone {
+  from { opacity: 0; transform: scale(0.4) rotate(-14deg) translateY(10px); }
+}
+.anima .card .ico-tile {
+  animation: en-pop calc(0.5s * var(--t)) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 220ms * var(--t) + var(--j, 0) * 45ms);
+}
+@keyframes en-pop {
+  from { opacity: 0; transform: scale(0.5); }
+}
+
+/* números grandes: entram junto e contam do zero (main.js) */
+.anima .card .big {
+  animation: en-numero calc(0.6s * var(--t)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 120ms * var(--t));
+}
+.contando .int,
+.contando .cents {
+  font-variant-numeric: tabular-nums;
+}
+@keyframes en-numero {
+  from { opacity: 0; transform: translateY(10px); filter: blur(4px); }
+}
+
+/* itens de lista entram um depois do outro */
+.anima .en-it {
+  animation: en-item calc(0.45s * var(--t)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 260ms * var(--t) + var(--j, 0) * 55ms * var(--t));
+}
+@keyframes en-item {
+  from { opacity: 0; transform: translateY(8px); }
+}
+
+/* barras crescem da esquerda */
+.anima .sb-bar,
+.anima .split-bar,
+.anima .alloc-bar {
+  animation: en-revela calc(1s * var(--t)) cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 300ms * var(--t));
+}
+@keyframes en-revela {
+  from { clip-path: inset(0 100% 0 0 round 999px); }
+  to { clip-path: inset(0 0 0 0 round 999px); }
+}
+.anima .meter .fill,
+.anima .mor-meter .fill {
+  transform-origin: left center;
+  animation: en-barra calc(1s * var(--t)) cubic-bezier(0.65, 0, 0.35, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 320ms * var(--t));
+}
+@keyframes en-barra {
+  from { transform: scaleX(0); }
+}
+.anima .mor-meter .mk,
+.anima .mor-meter .ref {
+  animation: en-texto 0.4s ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 900ms * var(--t));
+}
+
+/* barras de vidro sobem uma a uma */
+.anima .glass-bars .gb {
+  transform-origin: bottom center;
+  animation: en-sobe-barra calc(0.7s * var(--t)) cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 250ms * var(--t) + var(--j, 0) * 45ms * var(--t));
+}
+@keyframes en-sobe-barra {
+  from { transform: scaleY(0); opacity: 0.3; }
+}
+
+/* gráficos: a linha se desenha da esquerda, depois vem o brilho e o ponto */
+.anima .rh-svg .ln,
+.anima .rh-svg .ar,
+.anima svg.spark .ln,
+.anima svg.spark .ar {
+  animation: en-desenha calc(1.3s * var(--t)) cubic-bezier(0.45, 0, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 250ms * var(--t));
+}
+@keyframes en-desenha {
+  from { clip-path: inset(-20% 100% -20% 0); }
+  to { clip-path: inset(-20% 0 -20% 0); }
+}
+.anima .rh-svg .ar,
+.anima svg.spark .ar {
+  animation-name: en-desenha, en-aparece;
+  animation-duration: calc(1.3s * var(--t)), calc(1.1s * var(--t));
+  animation-delay: calc(var(--d, 0ms) + 250ms * var(--t)), calc(var(--d, 0ms) + 450ms * var(--t));
+}
+.anima .rh-svg .gl,
+.anima .rh-svg .vl-fim,
+.anima .rh-svg .tag,
+.anima .rh-svg .ax,
+.anima .rh-svg .base {
+  animation: en-aparece calc(0.7s * var(--t)) ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 1250ms * var(--t));
+}
+.anima .rh-svg .ax,
+.anima .rh-svg .base {
+  animation-delay: calc(var(--d, 0ms) + 200ms * var(--t));
+}
+.anima .rh-svg .pt,
+.anima svg.spark .pt {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: en-ponto calc(0.6s * var(--t)) cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 1400ms * var(--t));
+}
+@keyframes en-aparece {
+  from { opacity: 0; }
+}
+@keyframes en-ponto {
+  from { opacity: 0; transform: scale(0); }
+}
+
+/* cartões deslizam pela direita */
+.anima .cc-slot,
+.anima .cc-face:not(.mini) {
+  animation: en-cartao calc(0.7s * var(--t)) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 180ms * var(--t));
+}
+.anima .cc-slot:nth-child(2) { animation-delay: calc(var(--d, 0ms) + 280ms * var(--t)); }
+.anima .cc-slot:nth-child(n + 3) { animation-delay: calc(var(--d, 0ms) + 380ms * var(--t)); }
+@keyframes en-cartao {
+  from { opacity: 0; transform: translateX(40px) rotate(2deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anima * {
+    animation: none !important;
+  }
 }

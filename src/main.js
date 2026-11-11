@@ -200,6 +200,7 @@ async function start() {
     return;
   }
   renderShell();
+  ultimaRota = null;
   route();
   if (unsub) unsub();
   unsub = api.subscribe(() => {
@@ -425,17 +426,93 @@ function renderShell() {
   <div id="tip" class="tip" role="tooltip" hidden></div>`;
 }
 
+let ultimaRota = null;
 function route() {
   const h = location.hash.replace("#", "");
   S.route = ROUTES.includes(h) ? h : "inicio";
   render();
   $("#main")?.focus({ preventScroll: true });
   window.scrollTo(0, 0);
+  if (S.route !== ultimaRota) animarEntrada(ultimaRota === null ? "abre" : "nav");
+  ultimaRota = S.route;
+}
+
+/* ------------------------------------------------------- animação de entrada
+   Na abertura (logado ou recém-entrado): blocos sobem em sequência, números
+   contam do zero, barras crescem, linhas dos gráficos se desenham, ícones
+   aparecem. Ao trocar de página, a mesma coisa mais curta e sem contagem.
+   Atualizações em tempo real não animam (render() desliga a classe). */
+const ITENS_ANIMADOS = ".bill, .todo-row, .mor-it, .meta-it, .cc-row, .day-pills > *, .stats > .stat, .who-list > *, .sb-legend > *, .kv > *, .hist-axis";
+let fimAnima = null;
+function animarEntrada(modo) {
+  const raiz = document.documentElement;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const page = $("#main .page");
+  if (!page) return;
+  raiz.classList.remove("anima", "anima-nav");
+  void raiz.offsetWidth; // reinicia as animações
+  const cards = [...page.querySelectorAll(".card, .page-head, .banner")];
+  const passo = modo === "abre" ? 75 : 45;
+  cards.forEach((c, i) => {
+    c.style.setProperty("--i", Math.min(i, 12));
+    c.style.setProperty("--d", `${Math.min(i, 12) * passo}ms`);
+    c.querySelectorAll(ITENS_ANIMADOS).forEach((it, j) => {
+      it.classList.add("en-it");
+      it.style.setProperty("--j", Math.min(j, 14));
+    });
+    c.querySelectorAll(".glass-bars .gb").forEach((b, j) => b.style.setProperty("--j", j));
+  });
+  raiz.classList.add("anima", modo === "nav" ? "anima-nav" : "anima-abre");
+  if (modo === "abre") contarNumeros(page);
+  clearTimeout(fimAnima);
+  fimAnima = setTimeout(() => raiz.classList.remove("anima", "anima-nav", "anima-abre"), modo === "abre" ? 3200 : 2000);
+}
+function pararAnimacao() {
+  clearTimeout(fimAnima);
+  document.documentElement.classList.remove("anima", "anima-nav", "anima-abre");
+  document.querySelectorAll(".contando").forEach((el) => el.classList.remove("contando"));
+}
+function contarNumeros(page) {
+  const fmt = new Intl.NumberFormat("pt-BR");
+  const alvos = [...page.querySelectorAll(".big .int")].slice(0, 30);
+  const dados = alvos.map((el) => {
+    const card = el.closest(".card");
+    const atraso = parseFloat(card?.style.getPropertyValue("--d")) || 0;
+    const cents = el.nextElementSibling?.classList.contains("cents") ? el.nextElementSibling : null;
+    const inteiro = Number(el.textContent.replace(/\D/g, "")) || 0;
+    const centavos = cents ? Number(cents.textContent.replace(/\D/g, "")) || 0 : 0;
+    el.parentElement.classList.add("contando");
+    return { el, cents, alvo: inteiro + centavos / 100, atraso: atraso + 150, txtInt: el.textContent, txtCents: cents?.textContent };
+  });
+  if (!dados.length) return;
+  const dur = 1300;
+  const t0 = performance.now();
+  const ease = (t) => 1 - Math.pow(1 - t, 4);
+  const passo = (agora) => {
+    let vivos = 0;
+    for (const d of dados) {
+      if (!d.el.isConnected) continue;
+      const t = Math.min(1, Math.max(0, (agora - t0 - d.atraso) / dur));
+      if (t >= 1) {
+        d.el.textContent = d.txtInt;
+        if (d.cents) d.cents.textContent = d.txtCents;
+        d.el.parentElement.classList.remove("contando");
+        continue;
+      }
+      vivos++;
+      const v = d.alvo * ease(t);
+      d.el.textContent = fmt.format(Math.floor(v));
+      if (d.cents) d.cents.textContent = `,${String(Math.floor((v % 1) * 100)).padStart(2, "0")}`;
+    }
+    if (vivos) requestAnimationFrame(passo);
+  };
+  requestAnimationFrame(passo);
 }
 window.addEventListener("hashchange", route);
 
 function render() {
   if (!$("#main") || !D() || D().semCasa) return;
+  pararAnimacao();
   document.querySelectorAll("[data-route]").forEach((a) =>
     a.dataset.route === S.route ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"),
   );
@@ -824,13 +901,13 @@ function rhChart(serieTodo, { id, titulo, fmt = "pct", h = 190, rotuloFim = "", 
         <clipPath id="${id}-cl"><path d="${d}L${x(serie.length - 1)},${H - padB}L0,${H - padB}Z"/></clipPath>
         <filter id="${id}-bl" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="4"/></filter>
       </defs>
-      <ellipse cx="${ex}" cy="${ey}" rx="${W * 0.2}" ry="${H * 0.5}" fill="url(#${id}-gl)" clip-path="url(#${id}-cl)"/>
-      <path d="${d}L${x(serie.length - 1)},${H - padB}L0,${H - padB}Z" fill="url(#${id}-ar)"/>
+      <ellipse class="gl" cx="${ex}" cy="${ey}" rx="${W * 0.2}" ry="${H * 0.5}" fill="url(#${id}-gl)" clip-path="url(#${id}-cl)"/>
+      <path class="ar" d="${d}L${x(serie.length - 1)},${H - padB}L0,${H - padB}Z" fill="url(#${id}-ar)"/>
       <line class="base" x1="0" x2="${W}" y1="${y(vals[0])}" y2="${y(vals[0])}"/>
-      <line class="vline" x1="${ex}" x2="${ex}" y1="${ey}" y2="${H - padB}"/>
-      <path class="ln" d="${d}" stroke="url(#${id}-ln)"/>
-      <circle cx="${ex}" cy="${ey}" r="7" fill="var(--chart-2)" filter="url(#${id}-bl)" opacity=".6"/>
-      <circle cx="${ex}" cy="${ey}" r="4.5" fill="var(--chart-2)"/>
+      <line class="vline vl-fim" x1="${ex}" x2="${ex}" y1="${ey}" y2="${H - padB}"/>
+      <path class="ln" d="${d}" stroke="url(#${id}-ln)" pathLength="1"/>
+      <circle class="pt" cx="${ex}" cy="${ey}" r="7" fill="var(--chart-2)" filter="url(#${id}-bl)" opacity=".6"/>
+      <circle class="pt" cx="${ex}" cy="${ey}" r="4.5" fill="var(--chart-2)"/>
       <g class="tag"><rect x="${tx}" y="2" width="${tw}" height="22" rx="11"/><text x="${tx + tw / 2}" y="17" text-anchor="middle">${esc(tag)}</text></g>
       <text class="ax" x="0" y="${H - 4}">${mesCurtoAno(serie[0][0])}</text>
       <g class="hov" visibility="hidden"><line class="vline" y1="${padT - 6}" y2="${H - padB}"/><circle r="5" fill="var(--surface)" stroke="var(--chart-2)" stroke-width="2.5"/></g>
@@ -898,9 +975,9 @@ function spark(serie) {
       <linearGradient id="${id}-f" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".4" stop-color="#fff"/></linearGradient>
       <mask id="${id}-m"><rect width="${W}" height="${H}" fill="url(#${id}-f)"/></mask>
     </defs>
-    <path d="M${pts.join("L")}L${ex},${H}L${x(0)},${H}Z" fill="url(#${id}-a)" mask="url(#${id}-m)"/>
-    <polyline points="${pts.join(" ")}" fill="none" stroke="url(#${id}-l)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${ex}" cy="${ey}" r="5" fill="var(--glow)"/><circle cx="${ex}" cy="${ey}" r="2.8" fill="var(--chart-2)"/></svg>`;
+    <path d="M${pts.join("L")}L${ex},${H}L${x(0)},${H}Z" fill="url(#${id}-a)" mask="url(#${id}-m)" class="ar"/>
+    <polyline class="ln" pathLength="1" points="${pts.join(" ")}" fill="none" stroke="url(#${id}-l)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle class="pt" cx="${ex}" cy="${ey}" r="5" fill="var(--glow)"/><circle class="pt" cx="${ex}" cy="${ey}" r="2.8" fill="var(--chart-2)"/></svg>`;
 }
 
 function blocoMercadoResumo(span = "s4 m12 t12") {
