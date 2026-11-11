@@ -1923,3 +1923,178 @@ dialog.sheet {
     stroke-dashoffset: 0;
   }
 }
+
+/* tela de entrada: a marca se monta e o formulário sobe em seguida */
+.logo-anim.logo-auth {
+  height: 44px;
+  width: 194px;
+}
+.auth-card.entra > :not(.auth-brand) {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: entra-sobe 0.5s 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+.auth-card.entra > :not(.auth-brand):last-child {
+  animation-delay: 1.65s;
+}
+@keyframes entra-sobe {
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-card.entra > :not(.auth-brand) {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- seletor de data ---- */
+.dp {
+  position: relative;
+}
+.dp-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+}
+.dp-btn svg {
+  color: var(--text-3);
+  flex: none;
+}
+.dp-val.vazio {
+  color: var(--text-3);
+}
+.dp.aberto .dp-btn {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.dp-pop {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 296px;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.row2 > .field:last-child .dp-pop {
+  left: auto;
+  right: 0;
+}
+.dp-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dp-head strong,
+.dp-titulo {
+  font-size: 15px;
+  font-weight: 650;
+  text-transform: capitalize;
+  border: 0;
+  background: none;
+  color: var(--text);
+}
+.dp-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+  display: grid;
+  place-items: center;
+}
+.dp-nav:hover {
+  background: var(--surface-2);
+}
+.dp-meses {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.dp-semana,
+.dp-dias {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  text-align: center;
+}
+.dp-semana span {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text-3);
+  padding: 2px 0;
+}
+.dp-cel {
+  height: 38px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-size: 13.5px;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+.dp-meses .dp-cel {
+  height: 42px;
+  text-transform: capitalize;
+}
+.dp-cel.vazio {
+  pointer-events: none;
+}
+.dp-cel:hover:not([disabled]) {
+  background: var(--surface-2);
+}
+.dp-cel.hoje {
+  border-color: var(--border-strong);
+}
+.dp-cel.on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: 0 6px 16px -6px rgba(0, 200, 5, 0.6);
+}
+.dp-cel[disabled] {
+  color: var(--text-3);
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.dp-atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.dp-atalhos .chip {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+.dp-atalhos .chip:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+.dp-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}

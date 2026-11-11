@@ -19,5 +19,5 @@ export const logoCompleto = (cls = "") =>
 
 // Versão animada para a tela de carregamento: a casa aparece, o check se desenha,
 // o nome entra da direita para a esquerda e o pingo do i surge em limão por último.
-export const logoAnimado = () =>
-  `<svg class="logo-anim" viewBox="0 0 ${VB} 64" width="${VB}" height="64" role="img" aria-label="Casa em Dia, carregando"><path class="la-casa logo-casa" d="${CASA}" stroke-width="3" stroke-linejoin="round"/><path class="la-check" d="${CHECK}" pathLength="1" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g class="la-nome"><path class="logo-nome" d="${NOME}"/></g><circle class="la-pingo logo-pingo" cx="${PINGO[0]}" cy="${PINGO[1]}" r="${PINGO[2]}"/></svg>`;
+export const logoAnimado = (cls = "") =>
+  `<svg class="logo-anim ${cls}" viewBox="0 0 ${VB} 64" width="${VB}" height="64" role="img" aria-label="Casa em Dia, carregando"><path class="la-casa logo-casa" d="${CASA}" stroke-width="3" stroke-linejoin="round"/><path class="la-check" d="${CHECK}" pathLength="1" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><g class="la-nome"><path class="logo-nome" d="${NOME}"/></g><circle class="la-pingo logo-pingo" cx="${PINGO[0]}" cy="${PINGO[1]}" r="${PINGO[2]}"/></svg>`;

@@ -1,6 +1,8 @@
 import "./styles.css";
 import "./theme.css";
 import { logoAnimado, logoCompleto, logoSimbolo } from "./logo.js";
+import { campoData, ligarDatas } from "./datas.js";
+ligarDatas();
 import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
@@ -254,7 +256,11 @@ function renderFatal(msg) {
   document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div><div class="banner err">${ic("alerta")}<div class="grow">${esc(msg)}</div><button class="btn btn-sm" id="retry">Tentar de novo</button></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
   $("#retry").onclick = start;
 }
+// A marca se monta na primeira vez que a tela de entrada aparece (não a cada troca de aba).
+let entradaAnimada = false;
 function renderAuth(modo) {
+  const animarEntrada = !entradaAnimada;
+  entradaAnimada = true;
   document.body.classList.add("is-auth");
   const titulos = { entrar: "Entrar", criar: "Criar conta", esqueci: "Recuperar senha", nova: "Nova senha" };
   const textos = {
@@ -264,8 +270,8 @@ function renderAuth(modo) {
     nova: "Digite a nova senha da sua conta.",
   };
   document.body.innerHTML = `
-  <div class="auth"><div class="auth-card">
-    <div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div>
+  <div class="auth"><div class="auth-card${animarEntrada ? " entra" : ""}">
+    <div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${animarEntrada ? logoAnimado("logo-auth") : logoCompleto("logo-auth")}</div>
     <form class="card" id="authForm" novalidate>
       <div><h2 style="font-size:18px;font-weight:650">${titulos[modo]}</h2><p class="muted" style="margin-top:4px;font-size:14px">${textos[modo]}</p></div>
       ${modo !== "nova" ? `<div class="field"><label for="email">E-mail</label><input class="inp" id="email" type="email" autocomplete="email" required></div>` : ""}
@@ -1471,7 +1477,7 @@ function formDiaDia() {
 function formMeta(id) {
   const m = id ? D().metas.find((x) => x.id === id) : null;
   const corpo = `${fText("nome", "Nome da meta", m?.nome || "", 'maxlength="60" placeholder="Ex.: Entrada do apartamento"')}
-    <div class="row2">${fMoney("alvo", "Valor da meta", m?.alvo)}<div class="field"><label for="f_prazo">Prazo (mês)</label><input class="inp" id="f_prazo" name="prazo" type="month" value="${esc(m?.prazo || "")}"></div></div>
+    <div class="row2">${fMoney("alvo", "Valor da meta", m?.alvo)}${campoData({ name: "prazo", label: "Prazo", value: m?.prazo || "", modo: "mes", min: m?.prazo && m.prazo < curYM() ? "" : curYM(), placeholder: "Escolher mês" })}</div>
     ${fMoney("inicial", "Já guardado antes", m?.inicial ?? "", "Os aportes registrados depois somam a este valor.")}
     ${m ? confirmBlock("Apagar a meta e os aportes registrados?") : ""}`;
   const rodape = `${m ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
@@ -1487,9 +1493,10 @@ function formMeta(id) {
 }
 function formAporte(metaId) {
   const m = D().metas.find((x) => x.id === metaId);
-  const hoje = new Date().toISOString().slice(0, 10);
+  const agora = new Date();
+  const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, "0")}-${String(agora.getDate()).padStart(2, "0")}`;
   openSheet(`Aporte em ${esc(m.nome)}`, `${fMoney("valor", "Valor", "")}
-    <div class="field"><label for="f_data">Data</label><input class="inp" id="f_data" name="data" type="date" value="${hoje}"></div>
+    ${campoData({ name: "data", label: "Data", value: hoje, modo: "dia" })}
     <div class="field"><span class="lab">Quem guardou</span><div class="choice">${["a", "b"].map((v) => `<label><input type="radio" name="por" value="${v}" ${v === (minhaVaga() || "a") ? "checked" : ""}><span>${esc(nome(v))}</span></label>`).join("")}</div></div>`,
     `<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary">Registrar</button>`,
     guard(async (fd, _a, form) => {
@@ -1504,7 +1511,7 @@ function formInv(id) {
   const corpo = `${fText("nome", "Nome", v?.nome || "", 'maxlength="80" placeholder="Ex.: Tesouro Selic 2031"')}
     <div class="row2"><div class="field"><label for="f_cl">Classe</label><select class="inp" id="f_cl" name="classe">${CLASSES.map((c) => `<option ${(v?.classe || "Renda fixa") === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>${fText("instituicao", "Instituição", v?.instituicao || "", 'maxlength="60"')}</div>
     <div class="row2">${fMoney("valor", "Valor atual", v?.valor)}${fMoney("aplicado", "Valor aplicado (opcional)", v?.aplicado)}</div>
-    <div class="row2">${fText("rentab", "Rentabilidade em 12 meses, % (opcional)", v?.rentab_12m != null ? num(v.rentab_12m) : "", 'inputmode="decimal"')}<div class="field"><label for="f_venc">Vencimento (opcional)</label><input class="inp" id="f_venc" name="vencimento" type="date" value="${esc(v?.vencimento || "")}"></div></div>
+    <div class="row2">${fText("rentab", "Rentabilidade em 12 meses, % (opcional)", v?.rentab_12m != null ? num(v.rentab_12m) : "", 'inputmode="decimal"')}${campoData({ name: "vencimento", label: "Vencimento (opcional)", value: v?.vencimento || "", modo: "dia", placeholder: "Sem vencimento" })}</div>
     ${fText("liquidez", "Liquidez (opcional)", v?.liquidez || "", 'maxlength="30" placeholder="Ex.: diária, D+30, no vencimento"')}
     ${v ? confirmBlock("Apagar este investimento?") : ""}`;
   const rodape = `${v ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
