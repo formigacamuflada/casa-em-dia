@@ -9,7 +9,9 @@ import {
 
 const api = window.__CASA_API__ || createApi();
 const BASE = import.meta.env.BASE_URL || "./";
-const img = (n) => `${BASE}img/${n}.webp`;
+// A versão no endereço faz o navegador buscar de novo quando os ícones mudam.
+const IMG_V = "2";
+const img = (n) => `${BASE}img/${n}.webp?v=${IMG_V}`;
 
 /* ------------------------------------------------------------------ estado */
 const S = {
