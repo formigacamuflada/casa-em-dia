@@ -18,6 +18,20 @@ export function createApi() {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
 
+  // Links assinados das imagens dos cartões, reaproveitados até perto de expirar
+  // (assim a imagem não é baixada de novo a cada atualização em tempo real).
+  const links = new Map();
+  const VALIDADE = 12 * 3600;
+  async function assinar(paths) {
+    const agora = Date.now();
+    const faltam = paths.filter((p) => !(links.get(p)?.ate > agora + 3600 * 1000));
+    if (faltam.length) {
+      const { data } = await sb.storage.from("cartoes").createSignedUrls(faltam, VALIDADE);
+      for (const r of data || []) if (r.signedUrl && !r.error) links.set(r.path, { url: r.signedUrl, ate: agora + VALIDADE * 1000 });
+    }
+    return Object.fromEntries(paths.map((p) => [p, links.get(p)?.url || null]));
+  }
+
   const rows = async (q) => {
     const { data, error } = await q;
     fail(error);
@@ -72,6 +86,15 @@ export function createApi() {
         rows(sb.from("gastos_mensais").select("*").order("mes")),
         rows(sb.from("pluggy_itens").select("*").order("criado_em")),
       ]);
+      const comImagem = cartoes.filter((c) => c.imagem).map((c) => c.imagem);
+      if (comImagem.length) {
+        try {
+          const u = await assinar(comImagem);
+          for (const c of cartoes) if (c.imagem) c.imagem_url = u[c.imagem];
+        } catch {
+          /* sem imagem: o cartão aparece com o desenho padrão */
+        }
+      }
       return {
         semCasa: false,
         casa: casas[0] || null,
@@ -122,6 +145,18 @@ export function createApi() {
       const q = id ? sb.from(tabela).update(row).eq("id", id) : sb.from(tabela).insert(row);
       const { error } = await q;
       fail(error);
+    },
+    async enviarImagemCartao(casaId, userId, blob) {
+      const ext = blob.type === "image/jpeg" ? "jpg" : blob.type === "image/png" ? "png" : "webp";
+      const path = `${casaId}/${userId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await sb.storage.from("cartoes").upload(path, blob, { contentType: blob.type || "image/webp", upsert: false });
+      fail(error);
+      return path;
+    },
+    async apagarImagemCartao(path) {
+      if (!path) return;
+      links.delete(path);
+      await sb.storage.from("cartoes").remove([path]).catch(() => {});
     },
     async apagar(tabela, id) {
       const { error } = await sb.from(tabela).delete().eq("id", id);

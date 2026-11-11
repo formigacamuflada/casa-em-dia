@@ -1681,3 +1681,89 @@ dialog.sheet {
 .check input {
   border-radius: 50%;
 }
+
+/* ---- imagem real do cartão (como no Apple Pay) ---- */
+.cc-face.foto {
+  background-color: #1b1c1f;
+  background-size: cover;
+  background-position: center;
+  justify-content: flex-end;
+  color: #fff;
+}
+.cc-face.foto::after {
+  display: none;
+}
+.cc-face.foto::before {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.18) 34%, transparent 56%);
+  z-index: 0;
+}
+.cc-face.foto .cc-row,
+.cc-crop-frame .cc-row {
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.cc-crop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.cc-crop-frame {
+  position: relative;
+  width: min(360px, 100%);
+  aspect-ratio: 1012 / 638;
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+  background: #1b1c1f;
+  box-shadow: 0 14px 28px -12px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 18px 20px;
+  color: #fff;
+}
+.cc-crop-frame:active {
+  cursor: grabbing;
+}
+.cc-crop-frame img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  user-select: none;
+  pointer-events: none;
+}
+.cc-crop-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.58), rgba(0, 0, 0, 0.18) 34%, transparent 56%);
+  pointer-events: none;
+}
+.cc-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(360px, 100%);
+  font-size: 13px;
+  color: var(--text-2);
+}
+.cc-zoom input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+.cc-crop .hint {
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.img-pick {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.img-pick .btn {
+  cursor: pointer;
+}

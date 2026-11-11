@@ -662,6 +662,11 @@ function faceCartao(c, { mini = false, status = "" } = {}) {
   const f = c.faturas?.[S.month];
   const livre = c.limite != null ? Math.max(0, Number(c.limite) - (Number(f) || 0)) : null;
   const venc = c.vencimento ? `${String(c.vencimento).padStart(2, "0")}/${S.month.slice(5, 7)}` : "—";
+  const rodape = `<div class="cc-row bottom"><div><small>Vence</small><b>${venc}</b></div><div class="r"><small>${livre != null ? "Limite livre" : "Fatura"}</small><b>${livre != null ? brl(livre) : f != null ? brl(f) : "—"}</b></div></div>`;
+  // Com a imagem real do cartão (como no Apple Pay): só a arte, com vencimento e limite livre embaixo.
+  if (c.imagem_url) {
+    return `<div class="cc-face foto${mini ? " mini" : ""}" style="background-image:url('${esc(c.imagem_url)}')" role="img" aria-label="${esc(c.banco || "Cartão")}${c.apelido ? ` ${esc(c.apelido)}` : ""}">${rodape}</div>`;
+  }
   return `<div class="cc-face${claro ? " light-ink" : ""}${c.cor === "grafite" || c.cor === "preto" ? " brushed" : ""}${mini ? " mini" : ""}" style="--c1:${c1};--c2:${c2}">
     <div class="cc-row"><span class="cc-bank">${esc(c.banco || "Banco")}</span><span class="cc-tag">${status || (c.escopo === "casa" ? "Da casa" : "Pessoal")}</span></div>
     <div class="cc-mid">${CHIP}<span class="cc-nick">${esc((c.apelido || "").slice(0, 18))}</span>${NFC}</div>
@@ -1228,6 +1233,11 @@ function formCartao({ id, escopo } = {}) {
   const ym = S.month;
   const corpo = `
     <div class="cc-preview" id="ccPrev">${faceCartao(c || { banco: "Seu banco", apelido: "", cor: "grafite", escopo: esc0, vencimento: "" })}</div>
+    <div class="cc-crop" id="ccCrop" hidden><div class="cc-crop-frame" id="ccFrame"><img id="ccCropImg" alt="" draggable="false"><div class="cc-row bottom"><div><small>Vence</small><b id="ccCropV">—</b></div><div class="r"><small>Limite livre</small><b id="ccCropL">—</b></div></div></div>
+      <label class="cc-zoom"><span>Zoom</span><input type="range" id="ccZoom" min="1" max="3" step="0.01" value="1"></label><p class="hint">Arraste a imagem para enquadrar o cartão.</p></div>
+    <div class="field"><span class="lab">Imagem real do cartão (opcional)</span>
+      <div class="img-pick"><label class="btn btn-sm">${ic("cartao", "sm")}${c?.imagem ? "Trocar imagem" : "Escolher imagem"}<input type="file" id="ccFile" accept="image/*" hidden></label>${c?.imagem ? `<button type="button" class="btn btn-ghost btn-sm" id="ccImgRm">Remover imagem</button>` : ""}</div>
+      <span class="hint">Uma foto ou imagem da <b>frente</b> do cartão, como no Apple Pay. De preferência sem o número completo, e nunca o verso com o código de segurança. ${esc0 === "casa" ? "Cartão da casa: os dois veem a imagem." : "Cartão pessoal: só você vê a imagem."}</span></div>
     ${c ? `<div>${badge(esc0)}</div>` : `<div class="field"><span class="lab">De quem é o cartão</span><div class="choice">
       <label><input type="radio" name="escopo" value="casa" ${esc0 === "casa" ? "checked" : ""}><span>Da casa<small>Os dois veem, a fatura entra no acerto</small></span></label>
       <label><input type="radio" name="escopo" value="pessoal" ${esc0 === "pessoal" ? "checked" : ""}><span>Meu<small>Só você vê</small></span></label></div></div>`}
@@ -1241,8 +1251,9 @@ function formCartao({ id, escopo } = {}) {
     <div id="pagadorBox" ${esc0 === "pessoal" ? "hidden" : ""}>${fPagador(c?.pagador || minhaVaga() || "a")}</div>
     ${c ? confirmBlock("Apagar este cartão e o histórico de faturas?") : ""}`;
   const rodape = `${c ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
+  const corte = { img: null, zoom: 1, x: 0, y: 0, remover: false };
   openSheet(c ? "Editar cartão" : "Novo cartão", corpo, rodape, guard(async (fd, acao, form) => {
-    if (acao === "apagar") return act(() => api.apagar("cartoes", c.id), "Cartão apagado.");
+    if (acao === "apagar") return act(async () => { await api.apagar("cartoes", c.id); await api.apagarImagemCartao(c.imagem); }, "Cartão apagado.");
     const banco = String(fd.get("banco") || "").trim();
     if (!banco) return fieldErr(form, "banco", "Informe o banco do cartão."), false;
     const final = String(fd.get("final") || "").trim();
@@ -1257,10 +1268,17 @@ function formCartao({ id, escopo } = {}) {
       cor: fd.get("cor") || "grafite", vencimento, fechamento, limite, somar_nas_contas: fd.get("somar") === "on",
       pagador: escopoV === "casa" ? fd.get("pagador") || "a" : null,
     };
+    // Imagem: recorta no formato de cartão e envia antes de salvar o cartão.
+    const blob = corte.img ? await recortarCartao(corte) : null;
+    const novaImagem = blob ? await api.enviarImagemCartao(D().casa.id, meId(), blob) : undefined;
+    if (novaImagem !== undefined) row.imagem = novaImagem;
+    else if (corte.remover) row.imagem = null;
+    const antiga = c?.imagem && (novaImagem !== undefined || corte.remover) ? c.imagem : null;
     if (c) {
       return act(async () => {
         await api.salvar("cartoes", { ...row, atualizado_em: new Date().toISOString() }, c.id);
         if (fatura !== (c.faturas?.[ym] ?? null)) await api.valorMes("cartoes", c.id, ym, fatura);
+        if (antiga) await api.apagarImagemCartao(antiga);
       }, "Cartão salvo.");
     }
     return act(() => api.salvar("cartoes", { ...row, escopo: escopoV, faturas: fatura != null ? { [ym]: fatura } : {}, origem: S.origemCartao || null }), "Cartão cadastrado.");
@@ -1286,10 +1304,111 @@ function formCartao({ id, escopo } = {}) {
       escopo: c ? c.escopo : fd.get("escopo"), vencimento: String(fd.get("vencimento") || "").trim(),
       limite: Number.isFinite(lim) ? lim : null, faturas: Number.isFinite(fat) ? { [S.month]: fat } : {},
     };
+    if (!corte.remover && !corte.img && c?.imagem_url) prev.imagem_url = c.imagem_url;
     $("#ccPrev").innerHTML = faceCartao(prev);
+    const lv = prev.limite != null ? Math.max(0, prev.limite - (Number(prev.faturas[S.month]) || 0)) : null;
+    $("#ccCropV").textContent = prev.vencimento ? `${String(prev.vencimento).padStart(2, "0")}/${S.month.slice(5, 7)}` : "—";
+    $("#ccCropL").textContent = lv != null ? brl(lv) : "—";
   };
   form.addEventListener("input", atualizar);
   form.addEventListener("change", atualizar);
+  ligarCorte(form, corte, atualizar, c);
+  atualizar();
+}
+
+/* ---- recorte da imagem do cartão (formato 1,586:1, como um cartão de verdade) ---- */
+const CC_W = 1012;
+const CC_H = 638;
+function ligarCorte(form, corte, atualizar, c) {
+  const file = $("#ccFile");
+  const frame = $("#ccFrame");
+  const im = $("#ccCropImg");
+  const zoom = $("#ccZoom");
+  const posicionar = () => {
+    const fw = frame.clientWidth;
+    const fh = fw / (CC_W / CC_H);
+    const base = Math.max(fw / corte.img.naturalWidth, fh / corte.img.naturalHeight);
+    const w = corte.img.naturalWidth * base * corte.zoom;
+    const h = corte.img.naturalHeight * base * corte.zoom;
+    corte.x = Math.min(0, Math.max(fw - w, corte.x));
+    corte.y = Math.min(0, Math.max(fh - h, corte.y));
+    Object.assign(corte, { fw, fh, w, h });
+    im.style.width = `${w}px`;
+    im.style.height = `${h}px`;
+    im.style.transform = `translate(${corte.x}px, ${corte.y}px)`;
+  };
+  file.onchange = () => {
+    const f = file.files?.[0];
+    if (!f) return;
+    if (!/^image\//.test(f.type)) return toast("Escolha um arquivo de imagem.", true);
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      corte.img = img;
+      corte.zoom = 1;
+      corte.remover = false;
+      im.src = url;
+      $("#ccCrop").hidden = false;
+      $("#ccPrev").hidden = true;
+      requestAnimationFrame(() => {
+        const fw = frame.clientWidth;
+        const base = Math.max(fw / img.naturalWidth, fw / (CC_W / CC_H) / img.naturalHeight);
+        corte.x = (fw - img.naturalWidth * base) / 2;
+        corte.y = (fw / (CC_W / CC_H) - img.naturalHeight * base) / 2;
+        posicionar();
+      });
+    };
+    img.onerror = () => toast("Não consegui abrir essa imagem. Tente outra (JPG ou PNG).", true);
+    img.src = url;
+  };
+  zoom.oninput = () => {
+    const cx = corte.fw / 2 - corte.x;
+    const cy = corte.fh / 2 - corte.y;
+    const antes = corte.w;
+    corte.zoom = Number(zoom.value);
+    posicionar();
+    const k = corte.w / antes;
+    corte.x = corte.fw / 2 - cx * k;
+    corte.y = corte.fh / 2 - cy * k;
+    posicionar();
+  };
+  let drag = null;
+  frame.onpointerdown = (e) => {
+    if (!corte.img) return;
+    drag = { x: e.clientX - corte.x, y: e.clientY - corte.y };
+    frame.setPointerCapture(e.pointerId);
+  };
+  frame.onpointermove = (e) => {
+    if (!drag) return;
+    corte.x = e.clientX - drag.x;
+    corte.y = e.clientY - drag.y;
+    posicionar();
+  };
+  frame.onpointerup = frame.onpointercancel = () => (drag = null);
+  const rm = $("#ccImgRm");
+  if (rm) rm.onclick = () => {
+    corte.remover = true;
+    corte.img = null;
+    $("#ccCrop").hidden = true;
+    $("#ccPrev").hidden = false;
+    rm.hidden = true;
+    atualizar();
+  };
+}
+function recortarCartao(corte) {
+  const cv = document.createElement("canvas");
+  cv.width = CC_W;
+  cv.height = CC_H;
+  const ctx = cv.getContext("2d");
+  const k = CC_W / corte.fw;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(corte.img, corte.x * k, corte.y * k, corte.w * k, corte.h * k);
+  const gerar = (tipo, q) => new Promise((ok) => cv.toBlob((b) => ok(b), tipo, q));
+  // O Safari do iPhone pode não gerar WebP; nesse caso vai JPEG.
+  return gerar("image/webp", 0.86).then((b) => (b && b.type === "image/webp" ? b : gerar("image/jpeg", 0.88))).then((b) => {
+    if (!b) throw new Error("Não consegui preparar a imagem.");
+    return b;
+  });
 }
 
 function formFatura(id) {
