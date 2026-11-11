@@ -2280,3 +2280,62 @@ dialog.sheet {
     animation: none !important;
   }
 }
+
+/* ---- aviso com ação (Desfazer) ---- */
+.toast.has-act {
+  width: max-content;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 6px 6px 18px;
+}
+.toast-act {
+  font: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  min-height: 36px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.toast-act:hover {
+  background: color-mix(in srgb, currentColor 24%, transparent);
+}
+.toast-act:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+/* ---- descartar alterações do formulário ---- */
+.discard {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  font-size: 14px;
+}
+.discard p {
+  margin: 0;
+  flex: 1 1 180px;
+  font-weight: 600;
+}
+.discard .btns {
+  display: flex;
+  gap: 8px;
+}
+.esc-aviso {
+  display: block;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-2, var(--muted));
+}
+.esc-aviso:empty {
+  display: none;
+}

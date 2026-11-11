@@ -91,7 +91,19 @@ const TEMA_Q = { dark: "escuro", light: "claro" }[new URLSearchParams(location.s
 }
 
 /* ------------------------------------------------------------------ pessoas */
-const D = () => S.data;
+// Dados como a tela deve mostrar: sem os itens que estão no prazo do Desfazer.
+let visCache = { data: null, ver: -1, out: null };
+const D = () => {
+  if (!lixeira.size || !S.data || S.data.semCasa) return S.data;
+  if (visCache.data !== S.data || visCache.ver !== lixVer) {
+    const out = { ...S.data };
+    for (const [tabela, chaveDados] of Object.entries(DADOS_DA_TABELA)) {
+      if (Array.isArray(out[chaveDados])) out[chaveDados] = out[chaveDados].filter((x) => !lixeira.has(`${tabela}:${x.id}`));
+    }
+    visCache = { data: S.data, ver: lixVer, out };
+  }
+  return visCache.out;
+};
 const meId = () => S.session?.user?.id;
 const eu = () => D()?.membros.find((m) => m.user_id && m.user_id === meId()) || null;
 const minhaVaga = () => eu()?.vaga || null;
@@ -111,14 +123,71 @@ const ill = (n) => `<img class="ill" src="${img(n)}" alt="" width="44" height="4
 
 /* ------------------------------------------------------------------ toast & dica */
 let toastTimer;
-function toast(msg, err = false) {
+// acao opcional: { label, fn, ms } vira um botão dentro do aviso (ex.: Desfazer).
+function toast(msg, err = false, acao = null) {
   const t = $("#toast");
+  if (!t) return;
   t.textContent = msg;
-  t.className = `toast${err ? " err" : ""}`;
+  if (acao) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "toast-act";
+    b.textContent = acao.label;
+    b.onclick = () => {
+      clearTimeout(toastTimer);
+      t.hidden = true;
+      acao.fn();
+    };
+    t.append(b);
+  }
+  t.className = `toast${err ? " err" : ""}${acao ? " has-act" : ""}`;
   t.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (t.hidden = true), err ? 6000 : 3000);
+  toastTimer = setTimeout(() => (t.hidden = true), acao ? acao.ms || 7000 : err ? 6000 : 3000);
 }
+
+/* ---- apagar com Desfazer: o item some na hora e só é apagado no banco depois do prazo ---- */
+const DESFAZER_MS = 7000;
+const DADOS_DA_TABELA = { contas: "contas", cartoes: "cartoes", metas: "metas", investimentos: "invest" };
+const lixeira = new Map(); // "tabela:id" -> { timer, commit }
+let lixVer = 0;
+function apagarComDesfazer(tabela, id, msg, depois) {
+  const chave = `${tabela}:${id}`;
+  const commit = async () => {
+    const item = lixeira.get(chave);
+    if (!item) return;
+    clearTimeout(item.timer);
+    lixeira.delete(chave);
+    try {
+      await api.apagar(tabela, id);
+      if (depois) await depois();
+    } catch (e) {
+      console.error(e);
+      toast(`Não consegui apagar: ${erroMsg(e)}`, true);
+    }
+    lixVer++;
+    await reload();
+  };
+  lixeira.set(chave, { timer: setTimeout(commit, DESFAZER_MS), commit });
+  lixVer++;
+  render();
+  toast(msg, false, {
+    label: "Desfazer",
+    ms: DESFAZER_MS,
+    fn: () => {
+      const item = lixeira.get(chave);
+      if (!item) return;
+      clearTimeout(item.timer);
+      lixeira.delete(chave);
+      lixVer++;
+      render();
+      toast("Pronto, voltou.");
+    },
+  });
+  return true;
+}
+// Fechou o app no meio do prazo: tenta concluir as exclusões (se não der, o item continua lá).
+window.addEventListener("pagehide", () => lixeira.forEach((v) => v.commit()));
 function erroMsg(e) {
   const m = String(e?.message || e || "");
   if (/Failed to fetch|NetworkError|network/i.test(m)) return "Sem conexão. Confira a internet e tente de novo.";
@@ -1252,16 +1321,59 @@ function openSheet(titulo, corpo, rodape, onSubmit) {
       if (btn) btn.disabled = false;
     }
   };
-  d.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => d.close()));
+  d.querySelectorAll("[data-close]").forEach((b) => (b.onclick = () => tentarFecharSheet()));
+  // Marca o estado inicial depois que o formulário termina de montar (prévias, calendário etc.).
+  folha = { form, inicial: null, extra: false };
+  form.addEventListener("input", marcarExtra);
+  form.addEventListener("change", marcarExtra);
+  form.addEventListener("click", (e) => { if (e.target.closest?.("#ccImgRm")) folha.extra = true; });
   if (!d.open) d.showModal();
-  setTimeout(() => form.querySelector("input:not([type=hidden]):not([type=radio]):not([type=checkbox]), select")?.focus(), 30);
+  setTimeout(() => {
+    if (folha.form === form) folha.inicial = serialForm(form);
+    form.querySelector("input:not([type=hidden]):not([type=radio]):not([type=checkbox]), select")?.focus();
+  }, 30);
+}
+
+/* ---- fechar o formulário sem perder o que foi digitado ---- */
+let folha = { form: null, inicial: null, extra: false };
+const serialForm = (form) =>
+  JSON.stringify([...new FormData(form)].map(([k, v]) => [k, typeof v === "string" ? v : `${v.name}:${v.size}`]));
+// Campos sem nome (imagem do cartão, zoom do recorte) não entram no FormData: qualquer mexida conta.
+function marcarExtra(e) {
+  if (e.isTrusted && e.target?.matches?.("input:not([name]), select:not([name]), textarea:not([name])")) folha.extra = true;
+}
+const sheetAlterada = () =>
+  Boolean(folha.form && folha.inicial !== null && (folha.extra || serialForm(folha.form) !== folha.inicial));
+function tentarFecharSheet() {
+  const d = sheet();
+  if (!d?.open) return;
+  if (!sheetAlterada()) return d.close();
+  const pe = d.querySelector(".sheet-foot");
+  if (!pe || pe.querySelector(".discard")) return pe?.querySelector("[data-act=descartar]")?.focus();
+  const barra = document.createElement("div");
+  barra.className = "discard";
+  barra.setAttribute("role", "alert");
+  barra.innerHTML = `<p>Descartar o que você alterou?</p><div class="btns"><button type="button" class="btn btn-danger-solid btn-sm" data-act="descartar">Descartar</button><button type="button" class="btn btn-sm" data-act="continuar-editando">Continuar editando</button></div>`;
+  const antes = [...pe.children];
+  antes.forEach((x) => (x.hidden = true));
+  pe.append(barra);
+  const voltar = () => { barra.remove(); antes.forEach((x) => (x.hidden = false)); };
+  barra.querySelector("[data-act=descartar]").onclick = () => { voltar(); d.close(); };
+  barra.querySelector("[data-act=continuar-editando]").onclick = () => { voltar(); pe.querySelector("[type=submit]")?.focus(); };
+  barra.querySelector("[data-act=continuar-editando]").focus();
 }
 sheetCloseOnBackdrop();
 function sheetCloseOnBackdrop() {
   document.addEventListener("click", (e) => {
     const d = sheet();
-    if (d?.open && e.target === d) d.close();
+    if (d?.open && e.target === d) tentarFecharSheet();
   });
+  // Esc no formulário: mesma regra do botão Cancelar.
+  document.addEventListener("cancel", (e) => {
+    if (e.target !== sheet()) return;
+    e.preventDefault();
+    tentarFecharSheet();
+  }, true);
 }
 function fieldErr(form, name, msg) {
   const el = form.querySelector(`[name="${name}"]`);
@@ -1281,6 +1393,45 @@ const fDia = (name, label, val = "") =>
   `<div class="field"><label for="f_${name}">${label}</label><input class="inp" id="f_${name}" name="${name}" type="number" inputmode="numeric" min="1" max="31" value="${esc(val)}"></div>`;
 const fPagador = (val) =>
   `<div class="field"><span class="lab">Quem paga</span><div class="choice">${["a", "b"].map((v) => `<label><input type="radio" name="pagador" value="${v}" ${val === v ? "checked" : ""}><span>${esc(nome(v))}</span></label>`).join("")}</div><span class="hint">O acerto no fim do mês divide tudo meio a meio.</span></div>`;
+// Escolha Da casa / Pessoal. Sem padrão quando não dá para saber (evita expor conta pessoal por engano).
+// Na edição, só quem lançou pode trocar (o banco também só deixa o dono tornar pessoal).
+const nomeOutra = () => (D()?.membros.some((m) => m.vaga === outra()) ? nome(outra(), { voce: false }) : "A outra pessoa da casa");
+function fEscopo(item, esc0, { titulo, casaTxt, pessoalTxt, pessoalLbl = "Pessoal", fem = true }) {
+  if (item && item.dono_id !== meId()) {
+    return `<div>${badge(item.escopo)}<span class="hint">${fem ? "Lançada" : "Lançado"} por ${esc(nomeOutra())}. Só quem lançou pode ${fem ? "torná-la" : "torná-lo"} pessoal.</span></div>`;
+  }
+  return `<div class="field"><span class="lab">${titulo}</span><div class="choice">
+      <label><input type="radio" name="escopo" value="casa" ${esc0 === "casa" ? "checked" : ""}><span>Da casa<small>${casaTxt}</small></span></label>
+      <label><input type="radio" name="escopo" value="pessoal" ${esc0 === "pessoal" ? "checked" : ""}><span>${pessoalLbl}<small>${pessoalTxt}</small></span></label></div>
+      <span class="esc-aviso" id="escAviso" aria-live="polite"></span></div>`;
+}
+// Liga a escolha: mostra "Quem paga" só para conta da casa e avisa quando a edição muda quem vê.
+function ligarEscopo(item, tipo, entra, sai) {
+  sheet().querySelectorAll("input[name=escopo]").forEach((r) =>
+    (r.onchange = () => {
+      if (!r.checked) return;
+      $("#pagadorBox").hidden = r.value !== "casa";
+      const av = $("#escAviso");
+      if (!av || !item) return;
+      const outraP = nomeOutra();
+      av.textContent =
+        r.value === item.escopo ? ""
+        : r.value === "casa" ? `${outraP} passa a ver ${tipo}, ${entra}`
+        : `${outraP} deixa de ver ${tipo}, ${sai}`;
+    }),
+  );
+}
+function lerEscopo(fd, form, item, rotulo) {
+  if (item && item.dono_id !== meId()) return item.escopo;
+  const v = fd.get("escopo");
+  if (v !== "casa" && v !== "pessoal") {
+    fieldErr(form, "escopo", `Escolha se ${rotulo} é da casa ou pessoal.`);
+    throw new Error("validacao");
+  }
+  return v;
+}
+const msgEscopo = (antes, depois) =>
+  antes === depois ? "" : depois === "casa" ? ` Agora ${nomeOutra()} também vê.` : ` Agora só você vê.`;
 const confirmBlock = (texto, extra = "") =>
   `<div class="confirm" id="confirmDel" hidden><p>${texto}</p><div class="btns"><button type="submit" class="btn btn-danger-solid btn-sm" value="apagar">Apagar</button>${extra}<button type="button" class="btn btn-sm" data-act="cancel-del">Manter</button></div></div>`;
 function readMoney(fd, form, name, { required = false, label = "o valor" } = {}) {
@@ -1315,41 +1466,39 @@ const guard = (fn) => async (...args) => {
 
 function formConta({ id, escopo } = {}) {
   const c = id ? D().contas.find((x) => x.id === id) : null;
-  const esc0 = c?.escopo || escopo || "casa";
+  const esc0 = c?.escopo || escopo || null;
   const ym = S.month;
   const valorMes = c ? (c.valores?.[ym] ?? null) : null;
   const corpo = `
-    ${c ? `<div>${badge(esc0)}</div>` : `<div class="field"><span class="lab">Tipo de conta</span><div class="choice">
-      <label><input type="radio" name="escopo" value="casa" ${esc0 === "casa" ? "checked" : ""}><span>Da casa<small>Os dois veem</small></span></label>
-      <label><input type="radio" name="escopo" value="pessoal" ${esc0 === "pessoal" ? "checked" : ""}><span>Pessoal<small>Só você vê</small></span></label></div></div>`}
+    ${fEscopo(c, esc0, { titulo: "Tipo de conta", casaTxt: "Os dois veem", pessoalTxt: "Só você vê" })}
     ${fText("nome", "Nome", c?.nome || "", 'maxlength="80" placeholder="Ex.: Aluguel"')}
     <div class="row2">${fMoney("valor", c?.recorrente ? "Valor mensal" : "Valor", c?.valor)}${fDia("dia", "Dia do vencimento", c?.dia || "")}</div>
     ${c?.recorrente ? fMoney("valorMes", `Valor só em ${mesNome(ym).toLowerCase()}`, valorMes, "Para contas que mudam todo mês, como luz. Deixe em branco para usar o valor mensal.") : ""}
     <div class="field"><label for="f_cat">Categoria</label><select class="inp" id="f_cat" name="categoria">${CATEGORIAS.map(([k, l]) => `<option value="${k}" ${(c?.categoria || "outros") === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
     ${c ? "" : `<div class="field"><span class="lab">Repete?</span><div class="choice"><label><input type="radio" name="rec" value="1" checked><span>Todo mês</span></label><label><input type="radio" name="rec" value="0"><span>Só em ${mesNome(ym).toLowerCase()}</span></label></div></div>`}
-    <div id="pagadorBox" ${esc0 === "pessoal" ? "hidden" : ""}>${fPagador(c?.pagador || minhaVaga() || "a")}</div>
+    <div id="pagadorBox" ${esc0 !== "casa" ? "hidden" : ""}>${fPagador(c?.pagador || minhaVaga() || "a")}</div>
     ${c ? confirmBlock(c.recorrente ? "Apagar esta conta de todos os meses, inclusive o histórico?" : "Apagar esta conta?", c.recorrente ? `<button type="submit" class="btn btn-sm" value="encerrar">Só encerrar a partir de ${mesNome(ym, true)}</button>` : "") : ""}`;
   const rodape = `${c ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
   openSheet(c ? "Editar conta" : "Nova conta", corpo, rodape, guard(async (fd, acao, form) => {
-    if (acao === "apagar") return act(() => api.apagar("contas", c.id), "Conta apagada.");
+    if (acao === "apagar") return apagarComDesfazer("contas", c.id, `Conta "${c.nome}" apagada.`);
     if (acao === "encerrar") return act(() => api.salvar("contas", { fim: addYM(ym, -1), atualizado_em: new Date().toISOString() }, c.id), `Conta encerrada a partir de ${mesNome(ym).toLowerCase()}.`);
     const nomeV = String(fd.get("nome") || "").trim();
     if (!nomeV) return fieldErr(form, "nome", "Dê um nome para a conta."), false;
     const valor = readMoney(fd, form, "valor", { required: true });
     const dia = readDia(fd, form, "dia");
-    const escopoV = c ? c.escopo : fd.get("escopo");
-    const row = { nome: nomeV, valor, dia, categoria: fd.get("categoria"), pagador: escopoV === "casa" ? fd.get("pagador") || "a" : null };
+    const escopoV = lerEscopo(fd, form, c, "a conta");
+    const row = { nome: nomeV, escopo: escopoV, valor, dia, categoria: fd.get("categoria"), pagador: escopoV === "casa" ? fd.get("pagador") || "a" : null };
     if (c) {
       const vm = c.recorrente ? readMoney(fd, form, "valorMes") : undefined;
       return act(async () => {
         await api.salvar("contas", { ...row, atualizado_em: new Date().toISOString() }, c.id);
         if (c.recorrente && vm !== (c.valores?.[ym] ?? null)) await api.valorMes("contas", c.id, ym, vm);
-      }, "Conta salva.");
+      }, `Conta salva.${msgEscopo(c.escopo, escopoV)}`);
     }
     const rec = fd.get("rec") === "1";
-    return act(() => api.salvar("contas", { ...row, escopo: escopoV, recorrente: rec, inicio: ym, mes: rec ? null : ym }), escopoV === "casa" ? "Conta da casa lançada." : "Conta pessoal lançada.");
+    return act(() => api.salvar("contas", { ...row, recorrente: rec, inicio: ym, mes: rec ? null : ym }), escopoV === "casa" ? "Conta da casa lançada." : "Conta pessoal lançada.");
   }));
-  sheet().querySelectorAll("input[name=escopo]").forEach((r) => (r.onchange = () => ($("#pagadorBox").hidden = r.value === "pessoal" && r.checked)));
+  ligarEscopo(c, "esta conta", "e ela entra na divisão da casa em todos os meses.", "e ela sai da divisão da casa em todos os meses.");
 }
 
 function formCartao({ id, escopo } = {}) {
@@ -1363,9 +1512,7 @@ function formCartao({ id, escopo } = {}) {
     <div class="field"><span class="lab">Imagem real do cartão (opcional)</span>
       <div class="img-pick"><label class="btn btn-sm">${ic("cartao", "sm")}${c?.imagem ? "Trocar imagem" : "Escolher imagem"}<input type="file" id="ccFile" accept="image/*" hidden></label>${c?.imagem ? `<button type="button" class="btn btn-ghost btn-sm" id="ccImgRm">Remover imagem</button>` : ""}</div>
       <span class="hint">Uma foto ou imagem da <b>frente</b> do cartão, como no Apple Pay. De preferência sem o número completo, e nunca o verso com o código de segurança. ${esc0 === "casa" ? "Cartão da casa: os dois veem a imagem." : "Cartão pessoal: só você vê a imagem."}</span></div>
-    ${c ? `<div>${badge(esc0)}</div>` : `<div class="field"><span class="lab">De quem é o cartão</span><div class="choice">
-      <label><input type="radio" name="escopo" value="casa" ${esc0 === "casa" ? "checked" : ""}><span>Da casa<small>Os dois veem, a fatura entra no acerto</small></span></label>
-      <label><input type="radio" name="escopo" value="pessoal" ${esc0 === "pessoal" ? "checked" : ""}><span>Meu<small>Só você vê</small></span></label></div></div>`}
+    ${fEscopo(c, esc0, { titulo: "De quem é o cartão", casaTxt: "Os dois veem, a fatura entra no acerto", pessoalTxt: "Só você vê", pessoalLbl: "Meu", fem: false })}
     <div class="row2">${fText("banco", "Banco", c?.banco || "", 'maxlength="40" placeholder="Ex.: Nubank"')}${fText("apelido", "Apelido (opcional)", c?.apelido || "", 'maxlength="40" placeholder="Ex.: Cartão do mercado"')}</div>
     <div class="row2">${fText("final", "Últimos 4 dígitos (opcional)", c?.final || "", 'inputmode="numeric" maxlength="4" pattern="\\d{4}"')}
       <div class="field"><label for="f_band">Bandeira</label><select class="inp" id="f_band" name="bandeira">${["", "Visa", "Mastercard", "Elo", "American Express", "Hipercard", "Outra"].map((b) => `<option value="${b}" ${(c?.bandeira || "") === b ? "selected" : ""}>${b || "Não informar"}</option>`).join("")}</select></div></div>
@@ -1378,7 +1525,7 @@ function formCartao({ id, escopo } = {}) {
   const rodape = `${c ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
   const corte = { img: null, zoom: 1, x: 0, y: 0, remover: false };
   openSheet(c ? "Editar cartão" : "Novo cartão", corpo, rodape, guard(async (fd, acao, form) => {
-    if (acao === "apagar") return act(async () => { await api.apagar("cartoes", c.id); await api.apagarImagemCartao(c.imagem); }, "Cartão apagado.");
+    if (acao === "apagar") return apagarComDesfazer("cartoes", c.id, "Cartão apagado.", () => api.apagarImagemCartao(c.imagem));
     const banco = String(fd.get("banco") || "").trim();
     if (!banco) return fieldErr(form, "banco", "Informe o banco do cartão."), false;
     const final = String(fd.get("final") || "").trim();
@@ -1387,9 +1534,9 @@ function formCartao({ id, escopo } = {}) {
     const fechamento = readDia(fd, form, "fechamento", false);
     const limite = readMoney(fd, form, "limite");
     const fatura = readMoney(fd, form, "fatura");
-    const escopoV = c ? c.escopo : fd.get("escopo");
+    const escopoV = lerEscopo(fd, form, c, "o cartão");
     const row = {
-      banco, apelido: String(fd.get("apelido") || "").trim(), final: final || null, bandeira: fd.get("bandeira") || null,
+      banco, escopo: escopoV, apelido: String(fd.get("apelido") || "").trim(), final: final || null, bandeira: fd.get("bandeira") || null,
       cor: fd.get("cor") || "grafite", vencimento, fechamento, limite, somar_nas_contas: fd.get("somar") === "on",
       pagador: escopoV === "casa" ? fd.get("pagador") || "a" : null,
     };
@@ -1404,11 +1551,11 @@ function formCartao({ id, escopo } = {}) {
         await api.salvar("cartoes", { ...row, atualizado_em: new Date().toISOString() }, c.id);
         if (fatura !== (c.faturas?.[ym] ?? null)) await api.valorMes("cartoes", c.id, ym, fatura);
         if (antiga) await api.apagarImagemCartao(antiga);
-      }, "Cartão salvo.");
+      }, `Cartão salvo.${msgEscopo(c.escopo, escopoV)}`);
     }
-    return act(() => api.salvar("cartoes", { ...row, escopo: escopoV, faturas: fatura != null ? { [ym]: fatura } : {}, origem: S.origemCartao || null }), "Cartão cadastrado.");
+    return act(() => api.salvar("cartoes", { ...row, faturas: fatura != null ? { [ym]: fatura } : {}, origem: S.origemCartao || null }), "Cartão cadastrado.");
   }));
-  sheet().querySelectorAll("input[name=escopo]").forEach((r) => (r.onchange = () => ($("#pagadorBox").hidden = r.value === "pessoal" && r.checked)));
+  ligarEscopo(c, "este cartão", "e a fatura entra no acerto em todos os meses.", "e a fatura sai do acerto em todos os meses.");
   // Prévia ao vivo: o cartão na tela muda enquanto a pessoa digita.
   const form = sheet().querySelector("form");
   let corManual = Boolean(c);
@@ -1426,7 +1573,7 @@ function formCartao({ id, escopo } = {}) {
     const prev = {
       banco: banco || "Seu banco", apelido: String(fd.get("apelido") || "").trim(), final: String(fd.get("final") || "").replace(/\D/g, "").slice(0, 4),
       bandeira: fd.get("bandeira") || "", cor: form.querySelector("input[name=cor]:checked")?.value || "grafite",
-      escopo: c ? c.escopo : fd.get("escopo"), vencimento: String(fd.get("vencimento") || "").trim(),
+      escopo: fd.get("escopo") || c?.escopo || "pessoal", vencimento: String(fd.get("vencimento") || "").trim(),
       limite: Number.isFinite(lim) ? lim : null, faturas: Number.isFinite(fat) ? { [S.month]: fat } : {},
     };
     if (!corte.remover && !corte.img && c?.imagem_url) prev.imagem_url = c.imagem_url;
@@ -1573,7 +1720,7 @@ function formMeta(id) {
     ${m ? confirmBlock("Apagar a meta e os aportes registrados?") : ""}`;
   const rodape = `${m ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
   openSheet(m ? "Editar meta" : "Nova meta do casal", corpo, rodape, guard(async (fd, acao, form) => {
-    if (acao === "apagar") return act(() => api.apagar("metas", m.id), "Meta apagada.");
+    if (acao === "apagar") return apagarComDesfazer("metas", m.id, "Meta apagada.");
     const nomeV = String(fd.get("nome") || "").trim();
     if (!nomeV) return fieldErr(form, "nome", "Dê um nome para a meta."), false;
     const alvo = readMoney(fd, form, "alvo");
@@ -1607,7 +1754,7 @@ function formInv(id) {
     ${v ? confirmBlock("Apagar este investimento?") : ""}`;
   const rodape = `${v ? `<button type="button" class="btn btn-danger left" data-act="ask-del">${ic("lixo", "sm")}Apagar</button>` : ""}<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary" value="salvar">Salvar</button>`;
   openSheet(v ? "Editar investimento" : "Novo investimento", corpo, rodape, guard(async (fd, acao, form) => {
-    if (acao === "apagar") return act(() => api.apagar("investimentos", v.id), "Investimento apagado.");
+    if (acao === "apagar") return apagarComDesfazer("investimentos", v.id, "Investimento apagado.");
     const nomeV = String(fd.get("nome") || "").trim();
     if (!nomeV) return fieldErr(form, "nome", "Dê um nome para o investimento."), false;
     const r = String(fd.get("rentab") || "").trim();
@@ -1683,7 +1830,7 @@ document.addEventListener("click", async (e) => {
     case "mes-prox": S.month = addYM(S.month, 1); return render();
     case "mes-hoje": S.month = curYM(); return render();
     case "filtro": S.filtro = t.dataset.v; return render();
-    case "lancar": return formConta({ escopo: S.route === "minhas" ? "pessoal" : "casa" });
+    case "lancar": return formConta({ escopo: { minhas: "pessoal", casa: "casa" }[S.route] || null });
     case "nova-conta": return formConta({ escopo: t.dataset.escopo });
     case "edit-conta": return formConta({ id });
     case "novo-cartao": S.origemCartao = null; return formCartao({ escopo: t.dataset.escopo });
