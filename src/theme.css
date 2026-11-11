@@ -298,7 +298,8 @@ main:focus-visible {
   outline: none;
 }
 .page {
-  max-width: 1440px;
+  max-width: none;
+  margin: 0;
   gap: 16px;
 }
 .page-head {
@@ -622,9 +623,9 @@ img.ill3d {
 
 /* ---- contas a pagar ---- */
 /* a lista de contas acompanha a altura do saldo e rola por dentro */
-.dash > .c-contas {
+.dash > .c-contas.com-lista {
   contain: size;
-  min-height: 440px;
+  min-height: 360px;
 }
 .c-saldo {
   justify-content: space-between;
@@ -921,7 +922,7 @@ img.ill3d {
   display: none;
 }
 .cc-slot {
-  flex: 0 0 82%;
+  flex: 0 0 min(82%, 340px);
   scroll-snap-align: start;
   border: 0;
   padding: 0;
@@ -1602,7 +1603,7 @@ dialog.sheet {
   }
 }
 @media (max-width: 720px) {
-  .dash > .c-contas {
+  .dash > .c-contas.com-lista {
     contain: none;
     min-height: 0;
   }

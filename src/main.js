@@ -564,7 +564,7 @@ function blocoVencimentos(span = "w1") {
   const sel = dias.includes(S.diaSel) ? S.diaSel : null;
   const lista = sel ? todas.filter((i) => Math.min(i.dia, daysIn(S.month)) === sel) : todas;
   const emDias = prox && ehMesAtual ? Math.max(0, prox.dia - hoje.getDate()) : null;
-  return `<section class="card ${span} c-contas">
+  return `<section class="card ${span} c-contas com-lista">
     ${cardTop("Contas a pagar", { sub: prox ? `· dia ${String(prox.dia).padStart(2, "0")}` : "", icone: "calendario" })}
     <div>${money(falta, "big lg")}<p class="big-sub">${emDias !== null ? `${emDias === 0 ? "vence hoje" : `próxima em ${emDias} ${emDias === 1 ? "dia" : "dias"}`} · ` : ""}${todas.length - abertas.length} de ${todas.length} pagas</p></div>
     <div class="day-pills" role="group" aria-label="Filtrar por dia">${dias
