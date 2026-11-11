@@ -24,15 +24,11 @@ Deno.serve(async (req) => {
     if (error || !who?.user) return json({ ok: false, erro: "Entre na sua conta para conectar um banco." }, 401);
 
     let itemId: string | undefined;
-    let soWebhook = false;
     try {
-      const corpo = await req.json();
-      itemId = corpo?.itemId || undefined; // para reautorizar uma conexão existente
-      soWebhook = corpo?.webhook === true; // só o endereço do webhook, para cadastrar no painel da Pluggy
+      itemId = (await req.json())?.itemId || undefined; // para reautorizar uma conexão existente
     } catch {
       // corpo vazio
     }
-    if (soWebhook) return json({ ok: true, webhookUrl: await webhookUrl() });
 
     const auth = await http(`${PLUGGY}/auth`, {
       method: "POST",

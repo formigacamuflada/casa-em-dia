@@ -213,20 +213,6 @@ export function createApi() {
       }
       return data.accessToken;
     },
-    async enderecoWebhook() {
-      const { data, error } = await sb.functions.invoke("pluggy-connect-token", { body: { webhook: true } });
-      if (error) {
-        let msg = error.message;
-        try {
-          const body = await error.context?.json?.();
-          if (body?.erro) msg = body.erro;
-        } catch {
-          /* mantém a mensagem original */
-        }
-        throw new Error(msg);
-      }
-      return data.webhookUrl;
-    },
     async sincronizarBancos() {
       const { data, error } = await sb.functions.invoke("pluggy-sync", { body: {} });
       if (error) {
