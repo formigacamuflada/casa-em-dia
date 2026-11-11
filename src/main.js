@@ -680,8 +680,8 @@ function pInicio() {
 }
 
 function bannerConvite() {
-  const b = D().membros.find((m) => m.vaga === "b");
-  if (!b || b.user_id || minhaVaga() !== "a") return "";
+  const b = D().membros.find((m) => !m.user_id);
+  if (!b) return "";
   return `<div class="banner">${ic("pessoas")}<div class="grow">${esc(b.apelido || "A segunda pessoa")} ainda não entrou. Passe o código <strong class="num">${esc(D().casa?.codigo_convite)}</strong> para ela criar a conta e entrar na casa.</div><a class="btn btn-sm" href="#ajustes">Ver convite</a></div>`;
 }
 
@@ -868,7 +868,8 @@ function leitura(m) {
 function pAjustes() {
   const casa = D().casa;
   const me = eu();
-  const b = D().membros.find((m) => m.vaga === "b");
+  const b = D().membros.find((m) => !m.user_id);
+  const sozinho = D().membros.every((m) => !m.user_id || m.user_id === meId());
   const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.matchMedia("(display-mode: standalone)").matches;
   return `${pageHead("Ajustes", "")}
   <div class="grid">
@@ -876,6 +877,10 @@ function pAjustes() {
       <dl class="kv">${D().membros.map((m) => `<dt><span class="chip">${avatar(m.vaga, true)}${esc(nome(m.vaga, { voce: false }))}${m.user_id === meId() ? " (você)" : ""}</span></dt><dd>${m.user_id ? "Conectada" : "Aguardando convite"} ${m.user_id === meId() || !m.user_id ? `<button class="link-btn" data-act="apelido" data-vaga="${m.vaga}">renomear</button>` : ""}</dd>`).join("")}</dl>
       ${b && !b.user_id ? `<div class="banner"><div class="grow">Código de convite: <strong class="num" style="font-size:17px;letter-spacing:.08em">${esc(casa?.codigo_convite)}</strong><br><span class="muted" style="font-size:13px">A outra pessoa cria a conta, escolhe “Entrar com convite” e digita este código.</span></div><button class="btn btn-sm" data-act="copiar" data-v="${esc(casa?.codigo_convite)}">${ic("copiar", "sm")}Copiar</button></div><button class="link-btn" data-act="novo-codigo" style="align-self:flex-start">Gerar outro código</button>` : ""}
       <dl class="kv"><dt>Divisão</dt><dd>50/50 com acerto no fim do mês</dd></dl>
+      <div><button class="btn btn-danger btn-sm" data-act="ask-sair-casa">${ic("sair", "sm")}Sair da casa</button></div>
+      <div class="confirm" id="confirmSairCasa" hidden><p>${sozinho
+        ? "Só você está nesta casa. Ao sair, a casa é apagada com as contas, cartões, metas e acertos lançados nela. Seus investimentos, dia a dia e bancos conectados continuam com você. Depois você pode criar outra casa ou entrar com um código de convite."
+        : `Ao sair, ${esc(nome(outra(), { voce: false }))} continua na casa com as contas e cartões da casa. Suas contas e cartões pessoais desta casa são apagados. Seus investimentos, dia a dia e bancos conectados continuam com você.`}</p><div class="btns"><button type="button" class="btn btn-danger-solid btn-sm" data-act="sair-casa">Sair da casa</button><button type="button" class="btn btn-sm" data-act="cancel-sair-casa">Ficar</button></div></div>
     </section>
     <section class="card s6 t12">${cardHead("cadeado", "Quem vê o quê", "", "")}
       <ul class="notes">
@@ -1226,6 +1231,9 @@ document.addEventListener("click", async (e) => {
     case "rm-item": return act(() => api.removeItem(id), "Banco removido.");
     case "ask-del": { const c = $("#confirmDel"); if (c) { c.hidden = false; c.scrollIntoView({ block: "nearest" }); } return; }
     case "cancel-del": $("#confirmDel").hidden = true; return;
+    case "ask-sair-casa": { const c = $("#confirmSairCasa"); c.hidden = false; c.scrollIntoView({ block: "nearest" }); return; }
+    case "cancel-sair-casa": $("#confirmSairCasa").hidden = true; return;
+    case "sair-casa": t.disabled = true; return act(() => api.sairDaCasa(), "Você saiu da casa.");
     case "acerto-feito": {
       const r = acerto(D(), S.month);
       return act(() => api.marcarAcerto({ casa_id: D().casa.id, mes: S.month, valor: r.valor, de: r.de, para: r.para }), "Acerto marcado como feito.");

@@ -109,6 +109,10 @@ export function createApi() {
       const { error } = await sb.rpc("entrar_na_casa", { p_codigo: codigo, p_apelido: apelido });
       fail(error);
     },
+    async sairDaCasa() {
+      const { error } = await sb.rpc("sair_da_casa");
+      fail(error);
+    },
     async novoCodigo() {
       const { data, error } = await sb.rpc("novo_codigo_convite");
       fail(error);
