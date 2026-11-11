@@ -185,12 +185,14 @@ let reloadTimer = null;
 async function start() {
   document.body.classList.remove("is-auth");
   renderLoading();
+  const inicio = Date.now();
   try {
     S.data = await api.loadAll();
   } catch (e) {
     renderFatal(erroMsg(e));
     return;
   }
+  await fimDaAbertura(inicio);
   if (S.data.semCasa) {
     renderOnboarding();
     return;
@@ -234,6 +236,17 @@ async function refreshMercado() {
 }
 
 /* ------------------------------------------------------------------ telas fora do app */
+// A abertura sempre termina antes de o app aparecer: a marca se monta (~2,3 s),
+// fica um instante e some com um fade. Com "reduzir movimento", não espera.
+const ABERTURA_MS = 2700;
+async function fimDaAbertura(inicio) {
+  const tela = document.querySelector(".loading-screen");
+  if (!tela || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const falta = ABERTURA_MS - (Date.now() - inicio);
+  if (falta > 0) await new Promise((r) => setTimeout(r, falta));
+  tela.classList.add("sai");
+  await new Promise((r) => setTimeout(r, 320));
+}
 function renderLoading() {
   document.body.innerHTML = `<div class="loading-screen" role="status"><h1 class="sr-only">Casa em Dia</h1>${logoAnimado()}<span class="sr-only">Carregando</span></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
 }

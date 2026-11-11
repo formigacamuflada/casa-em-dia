@@ -1866,6 +1866,10 @@ dialog.sheet {
   place-items: center;
   background: var(--bg);
 }
+.loading-screen.sai {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
 .logo-anim {
   height: 56px;
   width: 247px;
@@ -1874,24 +1878,24 @@ dialog.sheet {
 .la-casa {
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  animation: la-casa 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  animation: la-casa 0.65s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
 .la-check {
   stroke: var(--bg);
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: la-check 0.4s 0.35s ease-out forwards;
+  animation: la-check 0.55s 0.6s cubic-bezier(0.6, 0, 0.3, 1) forwards;
 }
 .la-nome {
   clip-path: inset(0 0 0 100%);
   transform: translateX(14px);
-  animation: la-nome 0.6s 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: la-nome 0.85s 1s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
 }
 .la-pingo {
   transform-box: fill-box;
   transform-origin: center;
   transform: scale(0);
-  animation: la-pingo 0.45s 1.15s cubic-bezier(0.3, 1.6, 0.5, 1) forwards, la-pulso 1.6s 1.7s ease-in-out infinite;
+  animation: la-pingo 0.5s 1.85s cubic-bezier(0.3, 1.6, 0.5, 1) forwards, la-pulso 1.6s 2.35s ease-in-out infinite;
 }
 @keyframes la-casa {
   from { opacity: 0; transform: translateY(6px) scale(0.6); }
