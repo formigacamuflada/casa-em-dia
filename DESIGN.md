@@ -34,5 +34,5 @@ One design, two palettes. The structure comes from the Duo Finn concept (sidebar
 - History bars are translucent green "glass" bars; the current month glows.
 
 ## Imagery
-- 3D icons in `public/img` (256px webp), one per card header, mapped in one place (`ILL` in `src/main.js`): carteira, calendario, balanca, cartoes, casa, cofre, grafico, bussola, cadeado, canecas, recibo, alvo. Translucent frosted glass in Robin Neon to Robinhood green, generated with fal (`google/nano-banana-2.1`) as two 3×2 sheets on white; white removed locally (background flood-fill plus color-to-alpha at the edges, so the glass stays soft on both themes).
+- 3D icons in `public/img` (256px webp), one per card header, mapped in one place (`ILL` in `src/main.js`): carteira, calendario, balanca, cartoes, casa, cofre, grafico, bussola, cadeado, canecas, recibo, alvo. Translucent frosted glass in Robin Neon to Robinhood green, generated with fal (`google/nano-banana-2.1`) as two 3×2 sheets on white; background removed with `fal-ai/birefnet/v2`, then cropped to 256px squares.
 - UI glyphs are authored line icons (`src/icons.js`).
