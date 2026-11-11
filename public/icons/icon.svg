@@ -1,4 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-<style>.a{fill:#00C805}.b{fill:#B6EF00}.l{fill:#0A0B0D}.c{fill:#FFFFFF}
-@media (prefers-color-scheme: dark){.b{fill:#CCFF00}.l{fill:#FFFFFF}.c{fill:#000000}}</style>
-<circle class="a" cx="24" cy="32" r="18"/><circle class="b" cx="40" cy="32" r="18"/><path class="l" d="M32 15.88A18 18 0 0 1 32 48.12A18 18 0 0 1 32 15.88Z"/><path class="c" d="M32 22.5L39.5 29.5V41H24.5V29.5Z"/><path class="l" d="M30 41V35.5H34V41Z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><mask id="m"><rect width="64" height="64" fill="#fff"/><path d="M21.5 38.5 L28.5 45.5 L43 31" fill="none" stroke="#000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></mask></defs><path d="M32 8.5 L55 29 V51 a5 5 0 0 1 -5 5 H14 a5 5 0 0 1 -5 -5 V29 Z" fill="#00C805" stroke="#00C805" stroke-width="3" stroke-linejoin="round" mask="url(#m)"/></svg>

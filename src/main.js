@@ -1,5 +1,6 @@
 import "./styles.css";
 import "./theme.css";
+import { logoCompleto, logoSimbolo } from "./logo.js";
 import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
@@ -234,16 +235,12 @@ async function refreshMercado() {
 
 /* ------------------------------------------------------------------ telas fora do app */
 function renderLoading() {
-  document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand">${brandMark()}<h1>Casa em Dia</h1></div><div class="skeleton" aria-label="Carregando"></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
+  document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div><div class="skeleton" aria-label="Carregando"></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
 }
 function renderFatal(msg) {
-  document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand">${brandMark()}<h1>Casa em Dia</h1></div><div class="banner err">${ic("alerta")}<div class="grow">${esc(msg)}</div><button class="btn btn-sm" id="retry">Tentar de novo</button></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
+  document.body.innerHTML = `<div class="auth"><div class="auth-card"><div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div><div class="banner err">${ic("alerta")}<div class="grow">${esc(msg)}</div><button class="btn btn-sm" id="retry">Tentar de novo</button></div></div></div><div id="toast" hidden></div><div id="tip" class="tip" hidden></div>`;
   $("#retry").onclick = start;
 }
-// Logo: dois círculos (um para cada pessoa) que se cruzam formando a casa. Cores seguem o tema.
-const brandMark = () =>
-  `<svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true"><circle class="lg-a" cx="24" cy="32" r="18"/><circle class="lg-b" cx="40" cy="32" r="18"/><path class="lg-l" d="M32 15.88A18 18 0 0 1 32 48.12A18 18 0 0 1 32 15.88Z"/><path class="lg-c" d="M32 22.5L39.5 29.5V41H24.5V29.5Z"/><path class="lg-l" d="M30 41V35.5H34V41Z"/></svg>`;
-
 function renderAuth(modo) {
   document.body.classList.add("is-auth");
   const titulos = { entrar: "Entrar", criar: "Criar conta", esqueci: "Recuperar senha", nova: "Nova senha" };
@@ -255,7 +252,7 @@ function renderAuth(modo) {
   };
   document.body.innerHTML = `
   <div class="auth"><div class="auth-card">
-    <div class="auth-brand">${brandMark()}<h1>Casa em Dia</h1></div>
+    <div class="auth-brand"><h1 class="sr-only">Casa em Dia</h1>${logoCompleto("logo-auth")}</div>
     <form class="card" id="authForm" novalidate>
       <div><h2 style="font-size:18px;font-weight:650">${titulos[modo]}</h2><p class="muted" style="margin-top:4px;font-size:14px">${textos[modo]}</p></div>
       ${modo !== "nova" ? `<div class="field"><label for="email">E-mail</label><input class="inp" id="email" type="email" autocomplete="email" required></div>` : ""}
@@ -315,7 +312,7 @@ function renderAuth(modo) {
 function renderOnboarding() {
   document.body.innerHTML = `
   <div class="auth"><div class="auth-card onb">
-    <div class="auth-brand">${brandMark()}<h1>Bem-vindo ao Casa em Dia</h1></div>
+    <div class="auth-brand">${logoSimbolo("logo-auth-sim")}<h1>Bem-vindo ao Casa em Dia</h1></div>
     <p class="muted">Um de vocês cria a casa. O outro entra com o código de convite que aparece em Ajustes.</p>
     <div class="onb-grid">
       <form class="card" id="fCriar">
@@ -371,7 +368,8 @@ function renderShell() {
   document.body.innerHTML = `
   <div class="app">
     <aside class="side" aria-label="Navegação">
-      <div class="brand" id="sideBrand"></div>
+      <a class="brand" href="#inicio" aria-label="Casa em Dia, visão geral">${logoCompleto("logo-side")}</a>
+      <div class="casa-row" id="sideBrand"></div>
       <nav class="nav" aria-label="Seções">
         <div class="nav-lbl">Menu</div>
         ${NAV.map(([r, label, , icon]) => `<a href="#${r}" data-route="${r}">${ic(icon)}<span>${label}</span></a>`).join("")}
