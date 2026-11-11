@@ -76,13 +76,19 @@ function temaAtual() {
   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
 }
 function aplicarTema(t) {
-  if (t) {
+  if (t === "auto") {
+    try { localStorage.removeItem(TEMA_KEY); } catch { /* sem armazenamento */ }
+    t = null;
+  } else if (t) {
     try { localStorage.setItem(TEMA_KEY, t); } catch { /* sem armazenamento: vale só nesta sessão */ }
   }
   const atual = t || TEMA_Q || temaAtual();
   document.documentElement.dataset.tema = atual;
   document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.setAttribute("content", atual === "escuro" ? "#000000" : "#f3f2ef"));
-  document.querySelectorAll("[data-act=tema]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === atual)));
+  const escolha = temaSalvo() || "auto";
+  document.querySelectorAll("[data-act=tema]").forEach((b) =>
+    b.setAttribute("aria-pressed", String(b.closest(".tema-escolha") ? b.dataset.v === escolha : b.dataset.v === atual)),
+  );
 }
 const TEMA_Q = { dark: "escuro", light: "claro" }[new URLSearchParams(location.search).get("tema")] || "";
 {
@@ -1407,14 +1413,17 @@ function pAjustes() {
       </ul></section>
     <section class="card s6 t12">${cardHead("pote", "Meus valores", "", "")}
       <dl class="kv"><dt>Minha renda (os dois veem)</dt><dd>${me?.renda != null ? brl(me.renda) : "—"} <button class="link-btn" data-act="renda" data-vaga="${me?.vaga}">editar</button></dd>
-      <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd>
-      <dt class="only-compact">Tema</dt><dd class="only-compact"><div class="tema-ctl" role="group" aria-label="Tema"><button data-act="tema" data-v="claro" aria-label="Claro" aria-pressed="${temaAtual() === "claro"}">${ic("sol", "sm")}</button><button data-act="tema" data-v="escuro" aria-label="Escuro" aria-pressed="${temaAtual() === "escuro"}">${ic("lua", "sm")}</button></div></dd></dl></section>
+      <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
       ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
+    <section class="card s6 t12">${cardHead("", "Aparência", "Vale só neste aparelho", "")}
+      <div class="seg-ctl wide tema-escolha" role="group" aria-label="Tema">${[["auto", "Automático", "tema-auto"], ["claro", "Claro", "sol"], ["escuro", "Escuro", "lua"]]
+        .map(([v, l, i]) => `<button data-act="tema" data-v="${v}" aria-pressed="${(temaSalvo() || "auto") === v}">${ic(i, "sm")}${l}</button>`).join("")}</div>
+      <p class="tema-nota">Automático segue o modo claro ou escuro do celular ou do computador.</p></section>
     <section class="card s6 t12">${cardHead("", "Conta", esc(S.session?.user?.email || ""), "")}<div><button class="btn btn-sm" data-act="sair">${ic("sair", "sm")}Sair</button></div></section>
   </div>`;
 }

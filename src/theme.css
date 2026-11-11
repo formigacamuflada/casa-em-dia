@@ -2497,13 +2497,29 @@ dialog.sheet {
     top: calc(100% + 8px);
   }
 }
-/* Celular estreito: o tema sai do topo (fica em Ajustes) para caber o sininho. */
+/* Celular estreito: o tema sai do topo (fica em Ajustes → Aparência) para caber o sininho. */
 @media (max-width: 480px) {
   .top-right [data-act="tema-troca"] {
     display: none;
   }
 }
-.kv dd > .tema-ctl {
+/* Ajustes → Aparência: Automático / Claro / Escuro */
+.seg-ctl.tema-escolha {
+  grid-template-columns: 1.4fr 1fr 1fr;
+}
+.tema-escolha button {
   display: inline-flex;
-  width: auto;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 6px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.tema-escolha + .tema-nota {
+  margin: 10px 2px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-3);
 }
