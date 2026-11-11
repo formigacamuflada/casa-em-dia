@@ -1,73 +1,5 @@
 /* Casa em Dia: navegação lateral fixa + cartões de resumo; barra inferior no celular. */
-:root {
-  --bg: #f3f6f6;
-  --surface: #ffffff;
-  --surface-2: #f6f8f8;
-  --surface-3: #edf2f2;
-  --border: #e2e8e9;
-  --border-strong: #cbd5d7;
-  --text: #0f1c1e;
-  --text-2: #4f6064;
-  --text-3: #627276;
-  --accent: #1e5f67;
-  --accent-hover: #174c53;
-  --accent-soft: #e3eff0;
-  --on-accent: #ffffff;
-  --pa: #0a9a96;
-  --pb: #b97515;
-  --pa-soft: #ddf1f0;
-  --pb-soft: #f6ead9;
-  --pa-av: #087572;
-  --pb-av: #8f5a10;
-  --on-person: #ffffff;
-  --danger: #b42f23;
-  --danger-soft: #fbe9e6;
-  --warn: #a14a08;
-  --warn-soft: #fceedf;
-  --scrim: rgba(10, 18, 20, 0.45);
-  --shadow-1: 0 1px 2px rgba(15, 28, 30, 0.05), 0 2px 8px rgba(15, 28, 30, 0.04);
-  --shadow-2: 0 12px 40px rgba(15, 28, 30, 0.18), 0 2px 6px rgba(15, 28, 30, 0.06);
-  --font: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --r-sm: 8px;
-  --r-md: 12px;
-  --r-lg: 16px;
-  --nav-w: 248px;
-  --top-h: 64px;
-  --tab-h: 64px;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c1214;
-    --surface: #121a1c;
-    --surface-2: #172124;
-    --surface-3: #1c282b;
-    --border: #233134;
-    --border-strong: #34464a;
-    --text: #e6eeef;
-    --text-2: #a2b2b5;
-    --text-3: #7d8d90;
-    --accent: #7cc4c9;
-    --accent-hover: #9ad6da;
-    --accent-soft: #16343a;
-    --on-accent: #0c1214;
-    --pa: #25a39b;
-    --pb: #c0851f;
-    --pa-soft: #143331;
-    --pb-soft: #3a2a12;
-    --pa-av: #25a39b;
-    --pb-av: #c0851f;
-    --on-person: #0c1214;
-    --danger: #f08a78;
-    --danger-soft: #3a1c18;
-    --warn: #f2b45a;
-    --warn-soft: #3a2a14;
-    --scrim: rgba(0, 0, 0, 0.6);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
-    --shadow-2: 0 12px 40px rgba(0, 0, 0, 0.5);
-    color-scheme: dark;
-  }
-}
+/* Tokens de cor ficam em theme.css (tema claro e escuro). */
 
 *,
 *::before,
@@ -109,7 +41,7 @@ button {
   cursor: pointer;
 }
 a {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 h1,
 h2,
@@ -125,7 +57,7 @@ p {
   display: none !important;
 }
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
   border-radius: 6px;
 }
@@ -220,7 +152,7 @@ svg.i.sm {
 }
 .nav a[aria-current="page"] {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .nav-sep {
   height: 1px;
@@ -367,7 +299,7 @@ main {
 .btn-ghost {
   border-color: transparent;
   background: transparent;
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .btn-ghost:hover {
   background: var(--accent-soft);
@@ -413,7 +345,7 @@ main {
   border: 0;
   background: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 550;
   font-size: 13.5px;
 }
@@ -486,7 +418,7 @@ main {
 }
 .badge.private {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .badge.of {
   background: var(--surface-3);
@@ -775,7 +707,7 @@ main {
   color: var(--warn);
 }
 .state.done {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .lock-note {
   display: inline-flex;
@@ -1080,7 +1012,7 @@ table.t .r {
 }
 .chart .line {
   fill: none;
-  stroke: var(--accent);
+  stroke: var(--accent-ink);
   stroke-width: 2;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -1127,7 +1059,7 @@ table.t .r {
   color: var(--danger);
 }
 .delta.down {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 .delta.flat {
   color: var(--text-3);
@@ -1281,7 +1213,7 @@ dialog.sheet::backdrop {
   font-size: 16px;
 }
 .inp:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-ink);
   outline-offset: -1px;
   border-color: var(--accent);
 }
@@ -1492,7 +1424,7 @@ dialog.sheet::backdrop {
     font-weight: 550;
   }
   .tabbar a[aria-current="page"] {
-    color: var(--accent);
+    color: var(--accent-ink);
   }
   .toast {
     bottom: calc(var(--tab-h) + 20px + env(safe-area-inset-bottom, 0px));
