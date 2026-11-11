@@ -825,8 +825,8 @@ function blocoCenario() {
   return `<section class="card s12">${cardHead("bussola", "Cenário econômico", `Banco Central · atualizado em ${horaBR(M.atualizado_em)}`, "")}
     <div class="grid" style="gap:20px">
       <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">Selic efetiva (% a.a., média do mês)</p>${lineChart(m.series?.selic, { unidade: "%" })}</div>
-      <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">IPCA acumulado em 12 meses (%)</p>${lineChart(m.series?.ipca12m, { unidade: "%" })}</div>
-      <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">Dólar (R$, média do mês)</p>${lineChart(m.series?.dolar, { fmt: (v) => num(v, 2) })}</div>
+      <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">IPCA acumulado em 12 meses (%)</p>${lineChart(m.series?.ipca12m, { unidade: "%" })}<p class="source" style="margin-top:4px">O IBGE divulga o IPCA de cada mês só no mês seguinte; o gráfico mostra o último mês publicado.</p></div>
+      <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">Dólar (R$, média do mês)</p>${lineChart(m.series?.dolar, { fmt: (v) => num(v, 2) })}${m.parcial?.dolar ? `<p class="source" style="margin-top:4px">${mesCurtoAno(m.parcial.dolar.mes)}: média parcial de ${m.parcial.dolar.dias === 1 ? "1 dia útil" : `${m.parcial.dolar.dias} dias úteis`}, até ${dataBR(m.parcial.dolar.ate)}.</p>` : ""}</div>
       <div class="s6 t12"><p style="font-weight:600;font-size:14px;margin-bottom:8px">Expectativas do mercado (Focus${m.focus?.data ? ` de ${dataBR(m.focus.data)}` : ""})</p>
         <div class="table-wrap"><table class="t focus-table"><thead><tr><th>Mediana</th>${anos.map((a) => `<th class="r">${a}</th>`).join("")}</tr></thead><tbody>
           ${linhaF("IPCA", "IPCA (%)", (v) => num(v, 2))}${linhaF("Selic", "Selic (% a.a.)", (v) => num(v, 2))}${linhaF("Câmbio", "Dólar (R$)", (v) => num(v, 2))}${linhaF("PIB Total", "PIB (%)", (v) => num(v, 2), true)}

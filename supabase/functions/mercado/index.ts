@@ -85,13 +85,17 @@ Deno.serve(async (req) => {
   const ano = Number(hoje.slice(0, 4));
   const inicio24 = `${ano - 2}-${hoje.slice(5, 7)}-01`;
   const recente = addDays(hoje, -45);
+  // PTAX diária desde o início do mês (ou 15 dias, o que vier antes), para
+  // mostrar o mês corrente no gráfico: a série mensal 3698 só traz meses fechados.
+  const inicioMes = `${hoje.slice(0, 7)}-01`;
+  const desdeDolar = inicioMes < addDays(hoje, -15) ? inicioMes : addDays(hoje, -15);
 
   const [selicMeta, cdi, ipcaMes, ipca12, dolarDia, selicMes, ipca12Hist, dolarMes, fx] = await Promise.allSettled([
     sgs(432, recente, addDays(hoje, 60)),
     sgs(4389, recente, hoje),
     sgs(433, addDays(hoje, -120), hoje),
     sgs(13522, addDays(hoje, -120), hoje),
-    sgs(1, addDays(hoje, -15), hoje),
+    sgs(1, desdeDolar, hoje),
     sgs(4189, inicio24, hoje),
     sgs(13522, inicio24, hoje),
     sgs(3698, inicio24, hoje),
@@ -108,6 +112,16 @@ Deno.serve(async (req) => {
     return u ? { valor: u.valor, data: u.data, serie, rotulo, unidade } : null;
   };
 
+  // Mês corrente do dólar: média parcial das PTAX diárias já publicadas.
+  const serieDolar = ok(dolarMes) ? mensal(ok(dolarMes)!) : [];
+  let dolarParcial: { mes: string; ate: string; dias: number } | null = null;
+  const diasMes = (ok(dolarDia) || []).filter((r) => r.data.startsWith(hoje.slice(0, 7)) && r.data <= hoje);
+  if (serieDolar.length && diasMes.length && !serieDolar.some(([m]) => m === hoje.slice(0, 7))) {
+    const media = diasMes.reduce((s, r) => s + r.valor, 0) / diasMes.length;
+    serieDolar.push([hoje.slice(0, 7), Math.round(media * 10000) / 10000]);
+    dolarParcial = { mes: hoje.slice(0, 7), ate: diasMes[diasMes.length - 1].data, dias: diasMes.length };
+  }
+
   const dados = {
     indicadores: {
       selic: ind(ok(selicMeta), 432, "Meta Selic", "% a.a."),
@@ -120,8 +134,9 @@ Deno.serve(async (req) => {
     series: {
       selic: ok(selicMes) ? mensal(ok(selicMes)!) : [],
       ipca12m: ok(ipca12Hist) ? mensal(ok(ipca12Hist)!) : [],
-      dolar: ok(dolarMes) ? mensal(ok(dolarMes)!) : [],
+      dolar: serieDolar,
     },
+    parcial: { dolar: dolarParcial },
     fontes: [
       { nome: "Banco Central, SGS (séries 432, 4389, 433, 13522, 1, 4189 e 3698)", url: "https://www3.bcb.gov.br/sgspub" },
       { nome: "Banco Central, pesquisa Focus", url: "https://www.bcb.gov.br/publicacoes/focus" },
