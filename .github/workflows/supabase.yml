@@ -25,7 +25,7 @@ jobs:
       - name: Conectar ao projeto
         run: supabase link --project-ref "$PROJECT_REF" -p "$SUPABASE_DB_PASSWORD"
       - name: Aplicar migrações do banco
-        run: supabase db push -p "$SUPABASE_DB_PASSWORD" --include-all
+        run: supabase db push --remote -p "$SUPABASE_DB_PASSWORD" --include-all --yes
       - name: Segredos da Pluggy (se existirem)
         env:
           PLUGGY_CLIENT_ID: ${{ secrets.PLUGGY_CLIENT_ID }}
