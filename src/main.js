@@ -1172,7 +1172,8 @@ async function sincronizarAgora() {
 async function conectarBanco() {
   try {
     toast("Abrindo a conexão com o banco…");
-    const [{ default: PluggyConnect }, token] = await Promise.all([import("pluggy-connect-sdk"), api.connectToken()]);
+    const [mod, token] = await Promise.all([import("pluggy-connect-sdk"), api.connectToken()]);
+    const PluggyConnect = mod.PluggyConnect || mod.default;
     const pc = new PluggyConnect({
       connectToken: token,
       includeSandbox: false,
