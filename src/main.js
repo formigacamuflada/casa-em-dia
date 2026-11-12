@@ -1337,7 +1337,7 @@ function blocoGastosBancos(g, imp) {
   const cab = cardHead("envelope", "Gastos do mês nos bancos", sub, "pessoal", btn);
   const aviso = `<p class="source">O Meu Pluggy busca os dados nos bancos uma vez por dia; Sincronizar traz para cá o que ele já tem. Pagamento de fatura, transferências entre contas próprias, aplicações e resgates ficam de fora.</p>`;
   const falhas = (imp?.falhas || []).length
-    ? `<div class="gx-aviso">${ic("alerta", "sm")}<div>${imp.falhas.slice(0, 3).map((f) => esc(f.erro || "Falha ao ler uma conexão")).join("<br>")}</div></div>`
+    ? `<div class="gx-aviso">${ic("alerta", "sm")}<div>${imp.falhas.slice(0, 4).map((f) => `${f.conta ? `<b>${esc(f.conta)}</b>: ` : ""}${esc(f.erro || "Falha ao ler uma conexão")}`).join("<br>")}</div></div>`
     : "";
   if (!g || !(g.por_categoria || []).length) {
     const corpo = D().itens.length

@@ -60,7 +60,8 @@ export async function http(
       data = text;
     }
     if (!res.ok) {
-      const err = new Error(`HTTP ${res.status} em ${new URL(url).host}`) as Error & { status?: number };
+      const motivo = data && typeof data === "object" && typeof data.message === "string" ? `: ${data.message.slice(0, 160)}` : "";
+      const err = new Error(`HTTP ${res.status} em ${new URL(url).host}${motivo}`) as Error & { status?: number };
       err.status = res.status;
       throw err;
     }

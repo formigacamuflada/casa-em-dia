@@ -134,10 +134,16 @@ export async function sincronizar(itemIds: string[], userId: string) {
           });
         }
         try {
-          let p = 1;
-          let total = 1;
-          do {
-            const r = await pluggy("transactions", { accountId: a.id, from: desde, to: addDays(hoje, 1), pageSize: 500, page: p });
+          // GET /transactions (paginação por página) foi desligado pela Pluggy (HTTP 410);
+          // o atual é GET /v2/transactions com cursor: `next` é a query string da próxima página.
+          let qs: string | null = `?${new URLSearchParams({
+            accountId: a.id,
+            dateFrom: `${desde}T00:00:00.000Z`,
+            dateTo: `${addDays(hoje, 1)}T23:59:59.999Z`,
+          })}`;
+          let voltas = 0;
+          while (qs && voltas < 20) {
+            const r = await pluggy(`v2/transactions${qs}`);
             for (const t of r.results || []) {
               const bruto = Number(t.amount) || 0;
               // Cartão de crédito: valor positivo é compra (aumenta a fatura), negativo é pagamento ou estorno.
@@ -156,9 +162,10 @@ export async function sincronizar(itemIds: string[], userId: string) {
                   INTERNO_DESCRICAO.test(t.description || ""),
               });
             }
-            total = r.totalPages || 1;
-            p += 1;
-          } while (p <= total && p <= 20);
+            const prox: string | null = r.next || null;
+            qs = prox ? (prox.startsWith("http") ? new URL(prox).search : prox.startsWith("?") ? prox : `?${prox}`) : null;
+            voltas += 1;
+          }
         } catch (e) {
           falhas.push({ conta: nome, erro: (e as Error).message });
         }
