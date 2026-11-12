@@ -3,6 +3,7 @@ import "./theme.css";
 import { logoAnimado, logoCompleto, logoSimbolo } from "./logo.js";
 import { campoData, ligarDatas } from "./datas.js";
 import { abrirGuiaPluggy, guiaDesligado } from "./guia.js";
+import { abrirTour, deveMostrar, estadoTour, fecharTour, salvarTour, tourAberto, TOURS } from "./tour.js";
 ligarDatas();
 import { createApi } from "./api.js";
 import { ic } from "./icons.js";
@@ -623,6 +624,7 @@ function renderShell() {
         <div class="top-right">
           <button class="icon-btn only-compact" data-act="tema-troca" aria-label="Trocar tema">${ic(temaAtual() === "escuro" ? "sol" : "lua")}</button>
           <a class="icon-btn only-compact" href="#ajustes" aria-label="Ajustes">${ic("ajustes")}</a>
+          <button class="icon-btn" data-act="tour" aria-label="Como usar esta página" data-tip="Como usar esta página">${ic("ajuda")}</button>
           <div class="sino-wrap">
             <button class="icon-btn sino" id="sinoBtn" data-act="avisos" aria-label="Avisos" aria-haspopup="dialog" aria-expanded="false" aria-controls="avisosPop">${ic("sino")}<span class="sino-n" id="sinoN" hidden></span></button>
             <div class="avisos-pop" id="avisosPop" role="dialog" aria-label="Avisos" hidden></div>
@@ -645,11 +647,46 @@ let ultimaRota = null;
 function route() {
   const h = location.hash.replace("#", "");
   S.route = ROUTES.includes(h) ? h : "inicio";
+  if (tourAberto()) fecharTour(true);
   render();
   $("#main")?.focus({ preventScroll: true });
   window.scrollTo(0, 0);
-  if (S.route !== ultimaRota) animarEntrada(ultimaRota === null ? "abre" : "nav");
+  const primeira = ultimaRota === null;
+  if (S.route !== ultimaRota) {
+    animarEntrada(primeira ? "abre" : "nav");
+    agendarTour(S.route, primeira ? 2600 : 1500);
+  }
   ultimaRota = S.route;
+}
+
+/* ---- tutorial de cada aba (src/tour.js) ---- */
+let tourTimer = null;
+function agendarTour(rota, ms) {
+  clearTimeout(tourTimer);
+  tourTimer = setTimeout(() => {
+    if (S.route !== rota || !S.data || D().semCasa) return;
+    if (document.querySelector("dialog[open]") || tourAberto()) return; // ex.: guia do Meu Pluggy aberto
+    if (deveMostrar(S.session?.user, rota)) abrirTourAqui();
+  }, ms);
+}
+async function salvarTourConta(tour) {
+  try {
+    await api.auth.salvarMeta({ tour });
+  } catch (e) {
+    console.error(e); // fica salvo pelo menos neste aparelho
+  }
+}
+function abrirTourAqui() {
+  if (!TOURS[S.route]) return;
+  abrirTour(S.route, { user: S.session?.user, onSalvar: salvarTourConta });
+}
+// Ajustes → Tutoriais: vai para a aba e abre o tutorial dela.
+function abrirTourDe(rota) {
+  if (!TOURS[rota]) return;
+  clearTimeout(tourTimer);
+  if (S.route === rota) return abrirTourAqui();
+  location.hash = rota;
+  tourTimer = setTimeout(() => { if (S.route === rota) abrirTourAqui(); }, 1300);
 }
 
 /* ------------------------------------------------------- animação de entrada
@@ -1647,6 +1684,9 @@ function pAjustes() {
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
+    <section class="card s6 t12">${cardHead("", "Tutoriais", "5 passos com o mais importante de cada aba", "")}
+      <div class="tours-lista">${Object.entries(TOURS).map(([r, t]) => `<button class="btn btn-sm" data-act="tour-de" data-r="${r}">${ic("ajuda", "sm")}${esc(t.nome)}</button>`).join("")}</div>
+      <label class="toggle"><span class="check"><input type="checkbox" data-tour-auto ${estadoTour(S.session?.user).off ? "" : "checked"}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" style="stroke-width:2.5"/></svg></span>Mostrar sozinho na primeira visita a cada aba</label></section>
     <section class="card s6 t12">${cardHead("", "Aparência", "Vale só neste aparelho", "")}
       <div class="seg-ctl wide tema-escolha" role="group" aria-label="Tema">${[["auto", "Automático", "tema-auto"], ["claro", "Claro", "sol"], ["escuro", "Escuro", "lua"]]
         .map(([v, l, i]) => `<button data-act="tema" data-v="${v}" aria-pressed="${(temaSalvo() || "auto") === v}">${ic(i, "sm")}${l}</button>`).join("")}</div>
@@ -2182,6 +2222,11 @@ async function conectarBanco() {
   }
 }
 
+document.addEventListener("change", (e) => {
+  if (!e.target?.matches?.("[data-tour-auto]")) return;
+  salvarTour(S.session?.user, { off: !e.target.checked }, salvarTourConta);
+  toast(e.target.checked ? "Tutoriais voltam a aparecer na primeira visita a cada aba." : "Tutoriais não abrem mais sozinhos. Dá para ver em Ajustes → Tutoriais.");
+});
 document.addEventListener("toggle", (e) => {
   if (e.target?.matches?.("details[data-avancado]")) S.avancadoBancos = e.target.open;
 }, true);
@@ -2233,6 +2278,8 @@ document.addEventListener("click", async (e) => {
     case "add-item": return formItem();
     case "conectar-banco": return conectarBanco();
     case "guia-pluggy": return abrirGuia();
+    case "tour": return abrirTourAqui();
+    case "tour-de": return abrirTourDe(t.dataset.r);
     case "rm-item": return act(() => api.removeItem(id), "Banco removido.");
     case "ask-del": { const c = $("#confirmDel"); if (c) { c.hidden = false; c.scrollIntoView({ block: "nearest" }); } return; }
     case "cancel-del": $("#confirmDel").hidden = true; return;

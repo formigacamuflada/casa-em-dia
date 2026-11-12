@@ -1,0 +1,143 @@
+/* Tutorial de cada aba (src/tour.js) */
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  animation: tourEntra 0.25s ease;
+}
+.tour.sai {
+  animation: tourSai 0.2s ease forwards;
+}
+@keyframes tourEntra {
+  from { opacity: 0; }
+}
+@keyframes tourSai {
+  to { opacity: 0; }
+}
+.tour-veu {
+  position: absolute;
+  inset: 0;
+}
+.tour-furo {
+  position: fixed;
+  border-radius: 20px;
+  box-shadow: 0 0 0 9999px rgba(8, 10, 8, 0.62), 0 0 0 2px var(--neon, #ccff00), 0 0 24px 2px var(--glow, rgba(204, 255, 0, 0.35));
+  pointer-events: none;
+  transition: left 0.32s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.32s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.32s cubic-bezier(0.25, 0.8, 0.25, 1), height 0.32s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tour-furo[style*="display: none"] + .tour-pop,
+.tour:has(.tour-furo[style*="display: none"]) .tour-veu {
+  background: rgba(8, 10, 8, 0.62);
+}
+.tour-pop {
+  position: fixed;
+  width: min(360px, calc(100vw - 24px));
+  padding: 16px 16px 12px;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-2);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: left 0.32s cubic-bezier(0.25, 0.8, 0.25, 1), top 0.32s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.tour-pop.entra h3,
+.tour-pop.entra p {
+  animation: tourTexto 0.3s ease;
+}
+@keyframes tourTexto {
+  from { opacity: 0; transform: translateY(4px); }
+}
+.tour-pop.baixo {
+  left: 0 !important;
+  right: 0;
+  top: auto !important;
+  bottom: 0;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+.tour-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: -4px -6px -2px 0;
+}
+.tour-k {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.tour-pop h3 {
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+.tour-pop p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.tour-pop p b {
+  color: var(--text);
+  font-weight: 600;
+}
+.tour-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+.tour-btns {
+  display: flex;
+  gap: 6px;
+}
+.tour-btns .btn[disabled] {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.tour-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+}
+.tour-off {
+  font-size: 13px;
+  color: var(--text-2);
+  cursor: pointer;
+  user-select: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour,
+  .tour.sai,
+  .tour-furo,
+  .tour-pop,
+  .tour-pop.entra h3,
+  .tour-pop.entra p {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* No celular a barra do topo não tem espaço para o "?": o tutorial fica em Ajustes → Tutoriais. */
+@media (max-width: 480px) {
+  .top [data-act="tour"] {
+    display: none;
+  }
+}
+.tours-lista {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+.tours-lista .btn {
+  justify-content: flex-start;
+}

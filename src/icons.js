@@ -12,6 +12,7 @@ const P = {
   pessoas:
     '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M15.5 5.8a3 3 0 0 1 0 5.4"/><path d="M17 14.2a5.5 5.5 0 0 1 3.5 4.8"/>',
   "tema-auto": '<circle cx="12" cy="12" r="7.5"/><path d="M12 4.5v15a7.5 7.5 0 0 0 0-15z" fill="currentColor" stroke="none"/>',
+  ajuda: '<circle cx="12" cy="12" r="8.5"/><path d="M9.7 9.5a2.4 2.4 0 0 1 4.7.7c0 1.7-2.4 2-2.4 3.6"/><circle cx="12" cy="16.8" r=".9" fill="currentColor" stroke="none"/>',
   sino: '<path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5H5z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
   esq: '<path d="M14.5 6 8.5 12l6 6"/>',
   dir: '<path d="M9.5 6l6 6-6 6"/>',
