@@ -8,7 +8,7 @@ import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
   CATEGORIAS, CAT_CURTA, acerto, addYM, contasDoMes, curYM, daysIn, historicoMoradia,
-  metaResumo, moradia, parseMoney, round2, sobra, statusConta, sum,
+  bate, gastoReal, metaResumo, moradia, parseMoney, round2, sobra, statusConta, sum,
 } from "./calc.js";
 
 const api = window.__CASA_API__ || createApi();
@@ -824,10 +824,18 @@ function blocoSobra(span = "w2") {
     <div class="sb-bar" role="img" aria-label="Divisão da renda: metade da casa ${brl(s.casa)}, contas pessoais ${brl(s.pessoais)}, dia a dia ${brl(s.diaDia)}, sobra ${brl(Math.max(0, s.resto))}">${segs}</div>
     <div class="sb-legend">
       <div class="sbl"><span class="lg-l">Salário</span><span class="lg-v">${brl(s.renda)} <button class="icon-btn xs" data-act="renda" data-vaga="${v}" aria-label="Editar renda">${ic("lapis", "sm")}</button></span></div>
-      ${partes.map(([k, l, val]) => `<div class="sbl"><span class="lg-l"><i class="dot ${k}"></i>${l}${k === "dia" ? ` <button class="link-btn" data-act="diadia">ajustar</button>` : ""}</span><span class="lg-v">− ${brl(val)} <small>· ${pct(pctDe(val), 0)}</small></span></div>`).join("")}
+      ${partes.map(([k, l, val]) => `<div class="sbl"><span class="lg-l"><i class="dot ${k}"></i>${l}${k === "dia" ? ` <button class="link-btn" data-act="diadia">ajustar</button>` : ""}</span><span class="lg-v">− ${brl(val)} <small>· ${pct(pctDe(val), 0)}</small></span>${k === "dia" && s.diaReal != null ? `<span class="sbl-sub" data-tip="${esc(dicaDia(s))}">${s.diaReal > s.diaOrc ? `acima do orçamento de ${brl(s.diaOrc)}` : `gasto real: ${brl(s.diaReal)}`}</span>` : ""}</div>`).join("")}
       <div class="sbl total"><span class="lg-l"><i class="dot sobra"></i>= Sobra</span><span class="lg-v">${brl(s.resto)} <small>· ${pct(livre, 0)}</small></span></div>
     </div>
   </section>`;
+}
+
+// Explica qual valor do dia a dia entrou no Saldo previsto.
+function dicaDia(s) {
+  if (s.diaReal == null) return "";
+  return s.diaReal > s.diaOrc
+    ? `Você já gastou ${brl(s.diaReal)} nos bancos, mais que o orçamento de ${brl(s.diaOrc)}; o saldo usa o gasto real.`
+    : `Gasto real nos bancos até agora: ${brl(s.diaReal)}. O saldo reserva o orçamento inteiro (${brl(s.diaOrc)}) até o gasto passar dele.`;
 }
 
 function linhaConta(i, opts = {}) {
@@ -1398,8 +1406,17 @@ function blocoGastosBancos(g, imp) {
         </button>${dentro}</div>`;
     })
     .join("");
+  const minhasContas = [
+    ...contasDoMes(D(), S.month, "pessoal").filter((i) => i.tipo === "conta"),
+    ...contasDoMes(D(), S.month, "casa").filter((i) => i.tipo === "conta" && i.pagador === minhaVaga()),
+  ];
   const assin = (g.assinaturas || []).length
-    ? `<div class="gx-extra"><p class="gx-tt">Prováveis assinaturas</p><dl class="kv">${g.assinaturas.slice(0, 6).map((a) => `<dt>${esc(a.descricao)}</dt><dd>${brl(a.valor)}</dd>`).join("")}</dl></div>`
+    ? `<div class="gx-extra"><p class="gx-tt">Prováveis assinaturas</p><p class="faint gx-tsub">Se é um gasto fixo, vire conta pessoal: ela entra nas Contas pessoais e sai do dia a dia.</p><dl class="kv gx-assin">${g.assinaturas.slice(0, 8).map((a, k) => {
+        const ja = minhasContas.find((c) => bate(c.valorMes, c.nome, a.valor, a.descricao));
+        return `<dt>${esc(a.descricao)}</dt><dd><span class="num">${brl(a.valor)}</span>${ja
+          ? `<span class="gx-ja" data-tip="Já lançada como “${esc(ja.nome)}”">${ic("ok", "sm")}Conta</span>`
+          : `<button class="link-btn" data-act="assin-conta" data-i="${k}">Virar conta</button>`}</dd>`;
+      }).join("")}</dl></div>`
     : "";
   return `<section class="card s7 m12 t12 c-gastos">${cab}${falhas}
     <div class="gx">
@@ -1410,6 +1427,33 @@ function blocoGastosBancos(g, imp) {
         <div class="gx-list">${linhas}</div>
       </div>
     </div>${assin}${aviso}</section>`;
+}
+
+/* ---- Dia a dia: gasto real nos bancos × orçamento ---- */
+function blocoDiaADia() {
+  const orc = Number(D().prefs?.dia_a_dia || 0);
+  const r = gastoReal(D(), S.month, minhaVaga());
+  const cab = cardHead("pote", "Dia a dia", r ? "Gasto real nos bancos × seu orçamento" : "Quanto você reserva por mês para gastos soltos", "pessoal");
+  const btn = `<div><button class="btn btn-sm" data-act="diadia">Ajustar orçamento</button></div>`;
+  if (!r) return `<section class="card s5 m12 t12">${cab}${money(orc)}${btn}</section>`;
+  const passou = r.total > orc;
+  const pctUso = orc > 0 ? Math.min(100, (r.total / orc) * 100) : 100;
+  const conta = Math.max(orc, r.total);
+  const grupoFora = (lista, titulo) => (lista.length
+    ? `<p class="dd-ft">${titulo} <span class="num">${brl(sum(lista.map((t) => Math.abs(t.valor))))}</span></p>${lista.map((t) => `<div class="dd-tx"><span>${esc(t.descricao || "")}${t.motivo && titulo.startsWith("Já lançad") ? ` <small>→ ${esc(t.motivo)}</small>` : ""}</span><span class="num">${brl(Math.abs(t.valor))}</span></div>`).join("")}`
+    : "");
+  const fora = r.foraTotal > 0
+    ? `<details class="avancado dd-fora"><summary>${ic("dir", "sm")}Fora do dia a dia: ${brl(r.foraTotal)}</summary>
+        <p class="faint">Já contado em outro lugar do Saldo previsto, para não entrar duas vezes.</p>
+        ${grupoFora(r.fora.conta, "Já lançado como conta")}${grupoFora(r.fora.cartao, `Compras de cartão com fatura já nas contas${r.cartoesContados.length ? ` (${esc(r.cartoesContados.join(", "))})` : ""}`)}${grupoFora(r.fora.acerto, "Transferências para a outra pessoa da casa")}</details>`
+    : "";
+  return `<section class="card s5 m12 t12">${cab}
+    <div class="dd-num">${money(r.total)}<span class="faint">de ${brl(orc)} de orçamento</span></div>
+    <div class="meter${passou ? " over" : ""}"><div class="fill" style="width:${pctUso.toFixed(1)}%"></div></div>
+    <p class="dd-nota">${passou
+      ? `Passou ${brl(r.total - orc)} do orçamento. O Saldo previsto já usa o gasto real (${brl(conta)}).`
+      : `Ainda cabem ${brl(orc - r.total)}. O Saldo previsto reserva o orçamento inteiro (${brl(orc)}) até o gasto passar dele.`}</p>
+    ${fora}${btn}</section>`;
 }
 
 function pMinhas() {
@@ -1423,9 +1467,7 @@ function pMinhas() {
     <section class="card s7 m12 t12">${cardHead("cadeado", "Contas pessoais", mesNome(S.month), "pessoal")}
       ${itens.length ? `<div class="bills">${itens.map((i) => linhaConta(i)).join("")}</div><div class="list-foot"><span class="muted">${itens.filter((i) => i.pago).length} de ${itens.length} pagas</span><strong class="num">${brl(total)}</strong></div>` : vazio("", "Nenhuma conta pessoal neste mês", "Academia, curso, ajuda à família: o que é só seu fica aqui e não aparece para a outra pessoa.", `<button class="btn btn-primary btn-sm" data-act="nova-conta" data-escopo="pessoal">Nova conta pessoal</button>`)}
     </section>
-    <section class="card s5 m12 t12">${cardHead("pote", "Dia a dia", "Quanto você reserva por mês para gastos soltos", "pessoal")}
-      ${money(D().prefs?.dia_a_dia || 0)}<div><button class="btn btn-sm" data-act="diadia">Ajustar valor</button></div>
-    </section>
+    ${blocoDiaADia()}
     ${blocoGastosBancos(g, imp)}
     <section class="card s5 m12 t12">${cardHead("pote", "Saldos nas contas", imp ? `Atualizado em ${horaBR(imp.atualizado_em)}` : "", "pessoal")}
       ${imp && (imp.contas || []).length ? `${money(saldoTotal)}<dl class="kv">${imp.contas.map((c) => `<dt>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</dt><dd>${brl(c.saldo)}</dd>`).join("")}</dl>` : `<p class="faint">Os saldos aparecem depois da primeira sincronização com o Meu Pluggy.</p>`}
@@ -1766,7 +1808,7 @@ const guard = (fn) => async (...args) => {
   }
 };
 
-function formConta({ id, escopo } = {}) {
+function formConta({ id, escopo, pre } = {}) {
   const c = id ? D().contas.find((x) => x.id === id) : null;
   const esc0 = c?.escopo || escopo || null;
   const ym = S.month;
@@ -1801,6 +1843,13 @@ function formConta({ id, escopo } = {}) {
     return act(() => api.salvar("contas", { ...row, recorrente: rec, inicio: ym, mes: rec ? null : ym }), escopoV === "casa" ? "Conta da casa lançada." : "Conta pessoal lançada.");
   }));
   ligarEscopo(c, "esta conta", "e ela entra na divisão da casa em todos os meses.", "e ela sai da divisão da casa em todos os meses.");
+  if (pre && !c) {
+    const f = sheet().querySelector("form");
+    if (pre.nome) f.nome.value = pre.nome;
+    if (pre.valor != null) f.valor.value = num(pre.valor);
+    if (pre.dia && f.dia) f.dia.value = pre.dia;
+    if (pre.categoria) f.categoria.value = pre.categoria;
+  }
 }
 
 function formCartao({ id, escopo } = {}) {
@@ -2153,6 +2202,12 @@ document.addEventListener("click", async (e) => {
     }
     case "lancar": return formConta({ escopo: { minhas: "pessoal", casa: "casa" }[S.route] || null });
     case "nova-conta": return formConta({ escopo: t.dataset.escopo });
+    case "assin-conta": {
+      const a = (D().gastos.find((x) => x.mes === S.month)?.assinaturas || [])[Number(t.dataset.i)];
+      if (!a) return;
+      const nomeLimpo = String(a.descricao || "").replace(/\s+(BRA|BR|SAO PAULO|BELO HORIZON\w*)\b.*$/i, "").trim();
+      return formConta({ escopo: "pessoal", pre: { nome: nomeLimpo.slice(0, 80), valor: a.valor, dia: a.dia, categoria: "assinaturas" } });
+    }
     case "edit-conta": return formConta({ id });
     case "novo-cartao": S.origemCartao = null; return formCartao({ escopo: t.dataset.escopo });
     case "edit-cartao": return formCartao({ id });

@@ -156,7 +156,7 @@ export async function sincronizar(itemIds: string[], userId: string) {
               transacoes.push({
                 data: day(t.date), descricao: t.description,
                 comerciante: t.merchant?.name || t.merchant?.businessName || null,
-                valor: r2(valor), categoria, grupo, conta: nome, cartao: a.type === "CREDIT",
+                valor: r2(valor), categoria, grupo, conta: nome, contaId: a.id, cartao: a.type === "CREDIT",
                 pendente: t.status === "PENDING",
                 interno: INTERNO_CATEGORIA.test(t.category || "") || INTERNO_CATEGORIA.test(categoria) ||
                   INTERNO_DESCRICAO.test(t.description || ""),
@@ -237,20 +237,21 @@ export async function sincronizar(itemIds: string[], userId: string) {
         .slice(0, 400)
         .map((t) => ({
           data: t.data, descricao: t.comerciante || t.descricao, valor: t.valor, categoria: t.categoria,
-          grupo: t.grupo, conta: t.conta, cartao: t.cartao, pendente: t.pendente,
+          grupo: t.grupo, conta: t.conta, contaId: t.contaId, cartao: t.cartao, pendente: t.pendente,
         })),
     };
   });
 
   // Prováveis assinaturas: mesma descrição em 2+ meses com valor estável.
   const norm = (s: string) => String(s || "").toLowerCase().replace(/[0-9*#./-]+/g, " ").replace(/\s+/g, " ").trim();
-  const grupos = new Map<string, { descricao: string; meses: Set<string>; valores: number[] }>();
+  const grupos = new Map<string, { descricao: string; meses: Set<string>; valores: number[]; ultima: string }>();
   for (const t of transacoes) {
     if (t.interno || t.valor >= 0) continue;
     const k = norm(t.comerciante || t.descricao);
     if (!k) continue;
-    const g = grupos.get(k) || { descricao: t.comerciante || t.descricao, meses: new Set(), valores: [] };
+    const g = grupos.get(k) || { descricao: t.comerciante || t.descricao, meses: new Set(), valores: [], ultima: "" };
     g.meses.add(monthOf(t.data));
+    if (String(t.data) > g.ultima) g.ultima = String(t.data);
     g.valores.push(Math.abs(t.valor));
     grupos.set(k, g);
   }
@@ -260,11 +261,12 @@ export async function sincronizar(itemIds: string[], userId: string) {
       descricao: g.descricao,
       valor: r2(g.valores.reduce((s, v) => s + v, 0) / g.valores.length),
       variacao: Math.max(...g.valores) - Math.min(...g.valores),
+      dia: g.ultima ? Number(g.ultima.slice(8, 10)) || null : null,
     }))
     .filter((g) => g.variacao <= Math.max(5, (g.valor as number) * 0.15))
     .sort((a, b) => (b.valor as number) - (a.valor as number))
     .slice(0, 15)
-    .map(({ descricao, valor }) => ({ descricao, valor }));
+    .map(({ descricao, valor, dia }) => ({ descricao, valor, dia }));
 
   return { contas, cartoes, investimentos, gastos, assinaturas, falhas, itens: itensInfo };
 }
