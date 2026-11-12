@@ -8,7 +8,7 @@ import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
   CATEGORIAS, CAT_CURTA, acerto, addYM, contasDoMes, curYM, daysIn, historicoMoradia,
-  bate, gastoReal, metaResumo, moradia, parseMoney, round2, sobra, statusConta, sum,
+  bate, diasAteVencer, gastoReal, metaResumo, ordemDia, venceNoMesSeguinte, moradia, parseMoney, round2, sobra, statusConta, sum,
 } from "./calc.js";
 
 const api = window.__CASA_API__ || createApi();
@@ -838,6 +838,11 @@ function dicaDia(s) {
     : `Gasto real nos bancos até agora: ${brl(s.diaReal)}. O saldo reserva o orçamento inteiro (${brl(s.diaOrc)}) até o gasto passar dele.`;
 }
 
+// "Dia 07" para o que vence no mês; "Vence 07/12" para fatura que vence no mês seguinte.
+const rotuloDia = (i) => (venceNoMesSeguinte(i, S.month)
+  ? `Vence ${String(i.dia).padStart(2, "0")}/${i.venceYM.slice(5, 7)}`
+  : `Dia ${String(i.dia).padStart(2, "0")}`);
+
 function linhaConta(i, opts = {}) {
   const st = statusConta(i, S.month);
   const stTxt = { paga: "Paga", atrasada: "Atrasada", hoje: "Vence hoje", aberta: "" }[st];
@@ -847,7 +852,7 @@ function linhaConta(i, opts = {}) {
   return `<div class="bill${i.pago ? " paid" : ""}">
     ${tileIcon(i.nome, i.categoria)}
     <label class="check"><input type="checkbox" ${i.pago ? "checked" : ""} data-pago data-tabela="${tabela}" data-id="${i.id}" aria-label="${esc(i.nome)} paga"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" style="stroke-width:2.5"/></svg></label>
-    <div class="name"><strong>${esc(i.nome)}</strong><div class="meta">${opts.semDia ? "" : `<span>Dia ${String(i.dia).padStart(2, "0")}</span>`}${quem}<span>${esc(CAT_CURTA[i.categoria] || "Outros")}</span>${stTxt ? `<span class="state ${stCls}">${stTxt}</span>` : ""}</div></div>
+    <div class="name"><strong>${esc(i.nome)}</strong><div class="meta">${opts.semDia ? "" : `<span>${rotuloDia(i)}</span>`}${quem}<span>${esc(CAT_CURTA[i.categoria] || "Outros")}</span>${stTxt ? `<span class="state ${stCls}">${stTxt}</span>` : ""}</div></div>
     <span class="val">${brl(i.valorMes)}</span>
     <div class="row-actions"><button class="icon-btn" data-act="${i.tipo === "cartao" ? "edit-cartao" : "edit-conta"}" data-id="${i.id}" aria-label="Editar ${esc(i.nome)}">${ic("lapis", "sm")}</button></div>
   </div>`;
@@ -856,13 +861,16 @@ function linhaConta(i, opts = {}) {
 function listaPorDia(itens) {
   const grupos = new Map();
   for (const i of itens) {
-    const d = Math.min(i.dia, daysIn(S.month));
-    if (!grupos.has(d)) grupos.set(d, []);
-    grupos.get(d).push(i);
+    const prox = venceNoMesSeguinte(i, S.month);
+    const vYM = prox ? i.venceYM : S.month;
+    const d = Math.min(i.dia, daysIn(vYM));
+    const k = (prox ? 100 : 0) + d;
+    if (!grupos.has(k)) grupos.set(k, { d, vYM, prox, list: [] });
+    grupos.get(k).list.push(i);
   }
   return [...grupos.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([d, list]) => `<div class="day-group"><div class="day-label">Dia ${String(d).padStart(2, "0")} · ${diaSemana(S.month, d)}</div>${list.map((i) => linhaConta(i, { semDia: true })).join("")}</div>`)
+    .map(([, g]) => `<div class="day-group"><div class="day-label">${g.prox ? `Vence ${String(g.d).padStart(2, "0")}/${g.vYM.slice(5, 7)}` : `Dia ${String(g.d).padStart(2, "0")}`} · ${diaSemana(g.vYM, g.d)}</div>${g.list.map((i) => linhaConta(i, { semDia: true })).join("")}</div>`)
     .join("");
 }
 
@@ -871,25 +879,27 @@ function listaPorDia(itens) {
 function blocoVencimentos(span = "w1") {
   const casa = contasDoMes(D(), S.month, "casa");
   const minhas = contasDoMes(D(), S.month, "pessoal");
-  const todas = [...casa, ...minhas].sort((a, b) => a.dia - b.dia || Number(a.pago) - Number(b.pago));
+  const todas = [...casa, ...minhas].sort((a, b) => ordemDia(a, S.month) - ordemDia(b, S.month) || Number(a.pago) - Number(b.pago));
   if (!todas.length) {
     return `<section class="card ${span} c-contas">${cardTop("Contas a pagar", { icone: "calendario" })}${vazio("", "Nada lançado neste mês", "As contas da casa aparecem para os dois. As pessoais, só para quem lançou.", `<button class="btn btn-primary btn-sm" data-act="lancar">Lançar conta</button>`)}</section>`;
   }
   const abertas = todas.filter((i) => !i.pago);
   const falta = sum(abertas.map((i) => i.valorMes));
-  const dias = [...new Set(todas.map((i) => Math.min(i.dia, daysIn(S.month))))].sort((a, b) => a - b);
-  const hoje = new Date();
+  // Pílulas só com os dias deste mês; faturas que vencem no mês seguinte ficam no fim da lista.
+  const noMes = todas.filter((i) => !venceNoMesSeguinte(i, S.month));
+  const dias = [...new Set(noMes.map((i) => Math.min(i.dia, daysIn(S.month))))].sort((a, b) => a - b);
   const ehMesAtual = S.month === curYM();
-  const prox = abertas.find((i) => !ehMesAtual || i.dia >= hoje.getDate()) || abertas[0];
+  const prox = abertas.find((i) => !ehMesAtual || diasAteVencer(i, S.month) >= 0) || abertas[0];
   const sel = dias.includes(S.diaSel) ? S.diaSel : null;
-  const lista = sel ? todas.filter((i) => Math.min(i.dia, daysIn(S.month)) === sel) : todas;
-  const emDias = prox && ehMesAtual ? Math.max(0, prox.dia - hoje.getDate()) : null;
+  const lista = sel ? noMes.filter((i) => Math.min(i.dia, daysIn(S.month)) === sel) : todas;
+  const emDias = prox && ehMesAtual ? Math.max(0, diasAteVencer(prox, S.month)) : null;
+  const subProx = prox ? (venceNoMesSeguinte(prox, S.month) ? `· ${String(prox.dia).padStart(2, "0")}/${prox.venceYM.slice(5, 7)}` : `· dia ${String(prox.dia).padStart(2, "0")}`) : "";
   return `<section class="card ${span} c-contas com-lista">
-    ${cardTop("Contas a pagar", { sub: prox ? `· dia ${String(prox.dia).padStart(2, "0")}` : "", icone: "calendario" })}
+    ${cardTop("Contas a pagar", { sub: subProx, icone: "calendario" })}
     <div>${money(falta, "big lg")}<p class="big-sub">${emDias !== null ? `${emDias === 0 ? "vence hoje" : `próxima em ${emDias} ${emDias === 1 ? "dia" : "dias"}`} · ` : ""}${todas.length - abertas.length} de ${todas.length} pagas</p></div>
     <div class="day-pills" role="group" aria-label="Filtrar por dia">${dias
       .map((d) => {
-        const n = todas.filter((i) => Math.min(i.dia, daysIn(S.month)) === d);
+        const n = noMes.filter((i) => Math.min(i.dia, daysIn(S.month)) === d);
         const pend = n.some((i) => !i.pago);
         return `<button class="dp${sel === d ? " on" : ""}${pend ? "" : " done"}" data-act="dia-sel" data-v="${d}" aria-pressed="${sel === d}"><b>${String(d).padStart(2, "0")}</b><span class="dots">${n.slice(0, 5).map(() => "<i></i>").join("")}</span></button>`;
       })
@@ -903,7 +913,7 @@ function linhaTodo(i) {
   const quem = i.escopo === "casa" ? `<i class="dot ${i.pagador === "b" ? "b" : "a"}" title="${esc(nome(i.pagador === "b" ? "b" : "a"))} paga"></i>` : `<span class="lock">${ic("cadeado", "sm")}</span>`;
   return `<div class="todo-row${i.pago ? " paid" : ""}">
     <label class="radio"><input type="checkbox" ${i.pago ? "checked" : ""} data-pago data-tabela="${tabela}" data-id="${i.id}" aria-label="${esc(i.nome)} paga"><span></span></label>
-    <button class="todo-name" data-act="${i.tipo === "cartao" ? "edit-cartao" : "edit-conta"}" data-id="${i.id}">${esc(i.nome)} ${quem}${st === "atrasada" ? `<span class="state late">Atrasada</span>` : st === "hoje" ? `<span class="state today">Hoje</span>` : ""}</button>
+    <button class="todo-name" data-act="${i.tipo === "cartao" ? "edit-cartao" : "edit-conta"}" data-id="${i.id}">${esc(i.nome)} ${quem}${venceNoMesSeguinte(i, S.month) ? `<span class="state prox" title="${esc(rotuloDia(i))}">${String(i.dia).padStart(2, "0")}/${i.venceYM.slice(5, 7)}</span>` : ""}${st === "atrasada" ? `<span class="state late">Atrasada</span>` : st === "hoje" ? `<span class="state today">Hoje</span>` : ""}</button>
     <span class="val num">${brl(i.valorMes)}</span></div>`;
 }
 
@@ -981,7 +991,7 @@ function faceCartao(c, { mini = false, status = "" } = {}) {
   const [c1, c2, claro] = corDe(c.cor);
   const f = c.faturas?.[S.month];
   const livre = c.limite != null ? Math.max(0, Number(c.limite) - (Number(f) || 0)) : null;
-  const venc = c.vencimento ? `${String(c.vencimento).padStart(2, "0")}/${S.month.slice(5, 7)}` : "—";
+  const venc = c.vencimento ? `${String(c.vencimento).padStart(2, "0")}/${addYM(S.month, 1).slice(5, 7)}` : "—";
   const rodape = `<div class="cc-row bottom"><div><small>Vence</small><b>${venc}</b></div><div class="r"><small>${livre != null ? "Limite livre" : "Fatura"}</small><b>${livre != null ? brl(livre) : f != null ? brl(f) : "—"}</b></div></div>`;
   // Com a imagem real do cartão (como no Apple Pay): só a arte, com vencimento e limite livre embaixo.
   if (c.imagem_url) {
@@ -1483,7 +1493,7 @@ function pCartoes() {
     const pago = Boolean(c.pagos?.[S.month]);
     return `<section class="card">${faceCartao(c)}
       <dl class="kv"><dt>Fatura de ${mesNome(S.month, true)}</dt><dd>${f != null ? brl(f) : "—"} <button class="link-btn" data-act="fatura" data-id="${c.id}">${f != null ? "editar" : "informar"}</button></dd>
-      <dt>Vencimento</dt><dd>dia ${c.vencimento}</dd>${c.fechamento ? `<dt>Fechamento</dt><dd>dia ${c.fechamento}</dd>` : ""}
+      <dt>Vencimento</dt><dd>${String(c.vencimento).padStart(2, "0")}/${addYM(S.month, 1).slice(5, 7)}</dd>${c.fechamento ? `<dt>Fechamento</dt><dd>dia ${c.fechamento}</dd>` : ""}
       ${c.escopo === "casa" ? `<dt>Quem paga</dt><dd>${esc(nome(c.pagador === "b" ? "b" : "a"))}</dd>` : ""}
       ${c.limite ? `<dt>Limite</dt><dd>${brl(c.limite)}</dd>` : ""}</dl>
       ${usado !== null ? `<div><div class="meter"><div class="fill" style="width:${usado}%"></div></div><div class="meter-legend"><span>${pct(usado, 0)} do limite usado</span><span>${brl(c.limite - f)} livre</span></div></div>` : ""}
@@ -1869,7 +1879,7 @@ function formCartao({ id, escopo } = {}) {
       <div class="field"><label for="f_band">Bandeira</label><select class="inp" id="f_band" name="bandeira">${["", "Visa", "Mastercard", "Elo", "American Express", "Hipercard", "Outra"].map((b) => `<option value="${b}" ${(c?.bandeira || "") === b ? "selected" : ""}>${b || "Não informar"}</option>`).join("")}</select></div></div>
     <div class="field"><span class="lab">Cor do cartão</span><div class="swatches">${Object.entries(COR_CARTAO).filter(([k]) => !["petroleo", "ambar", "vinho", "noite", "oliva"].includes(k) || c?.cor === k).map(([k, [c1, c2]]) => `<label title="${k}"><input type="radio" name="cor" value="${k}" ${(c?.cor || "grafite") === k ? "checked" : ""}><span style="background:linear-gradient(135deg, ${c1}, ${c2})"></span><span class="sr-only">${k}</span></label>`).join("")}</div><span class="hint">A cor é escolhida pelo nome do banco; toque em outra para trocar.</span></div>
     <div class="row2">${fDia("vencimento", "Dia do vencimento", c?.vencimento || "")}${fDia("fechamento", "Dia do fechamento (opcional)", c?.fechamento || "")}</div>
-    <div class="row2">${fMoney("limite", "Limite (opcional)", c?.limite)}${fMoney("fatura", `Fatura de ${mesNome(ym, true)}`, c?.faturas?.[ym])}</div>
+    <div class="row2">${fMoney("limite", "Limite (opcional)", c?.limite)}${fMoney("fatura", `Fatura de ${mesNome(ym, true)}`, c?.faturas?.[ym], `Compras de ${mesNome(ym).toLowerCase()}; vence em ${mesNome(addYM(ym, 1)).toLowerCase()}.`)}</div>
     <label class="toggle"><input type="checkbox" name="somar" ${c ? (c.somar_nas_contas ? "checked" : "") : "checked"}> Somar a fatura nas contas do mês</label>
     <div id="pagadorBox" ${esc0 === "pessoal" ? "hidden" : ""}>${fPagador(c?.pagador || minhaVaga() || "a")}</div>
     ${c ? confirmBlock("Apagar este cartão e o histórico de faturas?") : ""}`;
@@ -1930,7 +1940,7 @@ function formCartao({ id, escopo } = {}) {
     if (!corte.remover && !corte.img && c?.imagem_url) prev.imagem_url = c.imagem_url;
     $("#ccPrev").innerHTML = faceCartao(prev);
     const lv = prev.limite != null ? Math.max(0, prev.limite - (Number(prev.faturas[S.month]) || 0)) : null;
-    $("#ccCropV").textContent = prev.vencimento ? `${String(prev.vencimento).padStart(2, "0")}/${S.month.slice(5, 7)}` : "—";
+    $("#ccCropV").textContent = prev.vencimento ? `${String(prev.vencimento).padStart(2, "0")}/${addYM(S.month, 1).slice(5, 7)}` : "—";
     $("#ccCropL").textContent = lv != null ? brl(lv) : "—";
   };
   form.addEventListener("input", atualizar);
@@ -2037,7 +2047,7 @@ function recortarCartao(corte) {
 function formFatura(id) {
   const c = D().cartoes.find((x) => x.id === id);
   const ym = S.month;
-  openSheet(`Fatura de ${mesNome(ym).toLowerCase()}`, `<p class="muted">${esc(c.apelido || c.banco)}${c.final ? ` ··${esc(c.final)}` : ""}</p>${fMoney("fatura", "Valor da fatura", c.faturas?.[ym], "Deixe em branco para remover a fatura deste mês.")}`,
+  openSheet(`Fatura de ${mesNome(ym).toLowerCase()}`, `<p class="muted">${esc(c.apelido || c.banco)}${c.final ? ` ··${esc(c.final)}` : ""}</p>${fMoney("fatura", "Valor da fatura", c.faturas?.[ym], `Compras de ${mesNome(ym).toLowerCase()}, com vencimento em ${mesNome(addYM(ym, 1)).toLowerCase()}. Deixe em branco para remover.`)}`,
     `<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button>`,
     guard(async (fd, _a, form) => act(() => api.valorMes("cartoes", c.id, ym, readMoney(fd, form, "fatura")), "Fatura salva.")));
 }

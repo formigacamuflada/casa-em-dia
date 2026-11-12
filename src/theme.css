@@ -2882,3 +2882,10 @@ details.avancado > p {
   width: 12px;
   height: 12px;
 }
+
+/* Contas a pagar: fatura que vence no mês seguinte */
+.todo-name .state.prox {
+  background: var(--surface-3);
+  color: var(--text-2);
+  white-space: nowrap;
+}

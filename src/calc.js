@@ -53,6 +53,8 @@ export function valorNoMes(conta, ym) {
 export const pagoNoMes = (item, ym) => Boolean(item.pagos && item.pagos[ym]);
 
 // Fatura de cartão vira uma conta do mês quando o cartão soma nas contas.
+// Faturas são por competência: a "fatura de novembro" são as compras de novembro,
+// que vencem no dia do vencimento do mês seguinte (venceYM).
 function faturaComoConta(cartao, ym) {
   const f = cartao.faturas && cartao.faturas[ym];
   if (!cartao.somar_nas_contas || f === undefined || f === null) return null;
@@ -63,11 +65,25 @@ function faturaComoConta(cartao, ym) {
     nome: `Fatura ${cartao.apelido || cartao.banco}`,
     valorMes: Number(f),
     dia: Number(cartao.vencimento) || 10,
+    venceYM: addYM(ym, 1),
     categoria: "cartao",
     pagador: cartao.pagador,
     pago: pagoNoMes(cartao, ym),
     ref: cartao,
   };
+}
+
+// Ordem de vencimento dentro do mês: o que vence no mês seguinte (faturas) vem depois.
+export const venceNoMesSeguinte = (item, ym) => Boolean(item.venceYM && item.venceYM !== ym);
+export const ordemDia = (item, ym) => (venceNoMesSeguinte(item, ym) ? 100 : 0) + Number(item.dia || 0);
+// Dias de hoje até o vencimento (negativo = já passou).
+export function diasAteVencer(item, ym, hoje = new Date()) {
+  const vYM = item.venceYM || ym;
+  const [y, m] = vYM.split("-").map(Number);
+  const d = Math.min(Number(item.dia) || 1, daysIn(vYM));
+  const alvo = new Date(y, m - 1, d);
+  const h = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate());
+  return Math.round((alvo - h) / 86400000);
 }
 
 export function contasDoMes(state, ym, escopo) {
@@ -92,7 +108,7 @@ export function contasDoMes(state, ym, escopo) {
     const f = faturaComoConta(k, ym);
     if (f) out.push(f);
   }
-  return out.sort((a, b) => a.dia - b.dia || a.nome.localeCompare(b.nome, "pt-BR"));
+  return out.sort((a, b) => ordemDia(a, ym) - ordemDia(b, ym) || a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
 export function acerto(state, ym) {
@@ -239,12 +255,9 @@ export function historicoMoradia(state, ym, n = 12) {
 
 export function statusConta(item, ym, hoje = new Date()) {
   if (item.pago) return "paga";
-  const atual = ymOf(hoje);
-  if (ym < atual) return "atrasada";
-  if (ym > atual) return "aberta";
-  const dia = Math.min(item.dia, daysIn(ym));
-  if (dia < hoje.getDate()) return "atrasada";
-  if (dia === hoje.getDate()) return "hoje";
+  const d = diasAteVencer(item, ym, hoje);
+  if (d < 0) return "atrasada";
+  if (d === 0) return "hoje";
   return "aberta";
 }
 
