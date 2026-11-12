@@ -1308,15 +1308,21 @@ function fatiasGastos(g, visao) {
   return { itens, fatias, total };
 }
 function roscaGastos(fatias, total) {
+  // Espaço visível igual entre todas as fatias: cada fatia ocupa o traço + as duas pontas
+  // arredondadas (SW/2 de cada lado); o que sobra do círculo depois dos espaços é dividido
+  // na proporção dos valores. Fatia muito pequena vira um ponto, sem invadir a vizinha.
   const R = 84, SW = 17, C = 2 * Math.PI * R;
-  const gap = fatias.length > 1 ? SW + 9 : 0;
+  const n = fatias.length;
+  const ESPACO = n > 1 ? 9 : 0;
+  const passo = n > 1 ? SW + ESPACO : 0; // ponta + espaço + ponta
+  const util = Math.max(C - n * passo, 0);
   let pos = 0;
   const segs = fatias
     .map((f, i) => {
-      const len = (f.total / total) * C;
-      const vis = Math.max(len - gap, 0.01);
-      const s = `<circle class="dn-seg" style="--k:${i}" r="${R}" cx="110" cy="110" fill="none" stroke="${f.cor}" stroke-width="${SW}" stroke-linecap="round" stroke-dasharray="${vis.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-(pos + gap / 2)).toFixed(2)}" ${f.outros ? "" : `data-act="gasto-abre" data-v="${esc(f.nome)}"`} data-tip="${esc(f.nome)}: ${brl(f.total)} · ${Math.round((f.total / total) * 100)}%"/>`;
-      pos += len;
+      const vis = n > 1 ? Math.max((f.total / total) * util, 0.01) : C;
+      const ini = pos + passo / 2;
+      pos += vis + passo;
+      const s = `<circle class="dn-seg" style="--k:${i}" r="${R}" cx="110" cy="110" fill="none" stroke="${f.cor}" stroke-width="${SW}" stroke-linecap="${n > 1 ? "round" : "butt"}" stroke-dasharray="${vis.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-ini).toFixed(2)}" ${f.outros ? "" : `data-act="gasto-abre" data-v="${esc(f.nome)}"`} data-tip="${esc(f.nome)}: ${brl(f.total)} · ${Math.round((f.total / total) * 100)}%"/>`;
       return s;
     })
     .join("");
