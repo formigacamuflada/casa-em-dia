@@ -1301,6 +1301,20 @@ function pCartoes() {
     ${importados.length ? `<section class="card">${cardHead("", "Encontrados no Open Finance", "Toque em Usar no app para acompanhar a fatura aqui", "pessoal")}<div class="table-wrap"><table class="t"><thead><tr><th>Cartão</th><th class="r">Fatura atual</th><th class="r">Limite livre</th><th>Vencimento</th><th></th></tr></thead><tbody>${importados.map((c) => `<tr><td>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</td><td class="r">${brl(c.fatura)}</td><td class="r">${c.disponivel != null ? brl(c.disponivel) : "—"}</td><td>${dataBR(c.vencimento)}</td><td class="r"><button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button></td></tr>`).join("")}</tbody></table></div></section>` : ""}`;
 }
 
+// Rentabilidade em 12 meses: número do banco, estimativa pelo indexador ou resultado desde a aplicação.
+const DICA_RENTAB = {
+  banco: "Rentabilidade dos últimos 12 meses informada pelo banco.",
+  indexador: "Quanto o título rendeu nos últimos 12 meses pelo indexador (dados do Banco Central), antes do IR. Se você aplicou há menos de 12 meses, é a taxa do título no período, não o seu ganho.",
+  aplicacao: "Sem indexador: resultado desde a aplicação (saldo ÷ valor aplicado), antes do IR.",
+};
+function celRentab(v) {
+  if (v.rentab_12m == null || !Number.isFinite(Number(v.rentab_12m))) return "—";
+  const n = Number(v.rentab_12m);
+  const cor = n < 0 ? ' style="color:var(--neg)"' : "";
+  const dica = DICA_RENTAB[v.rentabFonte] || "";
+  return `<span class="num"${cor}${dica ? ` data-tip="${esc(dica)}"` : ""}>${n > 0 ? "+" : ""}${pct(n, 2)}</span>${v.rentabNota ? `<div class="faint" style="font-size:12px;white-space:nowrap">${esc(v.rentabNota)}</div>` : ""}`;
+}
+
 const CORES_CLASSE = ["var(--sg-sobra)", "var(--sg-pess)", "var(--sg-casa)", "var(--pb)", "var(--warn)", "#8b5cf6", "var(--text-3)"];
 function pInvest() {
   const manuais = D().invest.map((v) => ({ ...v, origem: "manual" }));
@@ -1318,7 +1332,7 @@ function pInvest() {
         <div class="alloc-bar" role="img" aria-label="Carteira por classe">${classes.map(([c, v], k) => `<i style="flex:${(v / (total || 1)).toFixed(4)};background:${CORES_CLASSE[k % CORES_CLASSE.length]}" data-tip="${esc(c)}: ${brl(v)}"></i>`).join("")}</div>
         <div class="alloc-legend">${classes.map(([c, v], k) => `<div class="sbl"><span class="lg-l"><i class="dot" style="background:${CORES_CLASSE[k % CORES_CLASSE.length]}"></i>${esc(c)}</span><span class="lg-v">${brl(v)} <small>· ${pct((v / (total || 1)) * 100, 0)}</small></span></div>`).join("")}</div>
         <div class="table-wrap"><table class="t"><thead><tr><th>Investimento</th><th>Classe</th><th class="r">Valor</th><th class="r">12 meses</th><th>Vence</th><th></th></tr></thead><tbody>
-        ${todos.map((v) => `<tr><td>${esc(v.nome)}<div class="faint" style="font-size:12px">${esc(v.instituicao || "")}${v.origem === "openfinance" ? " · Open Finance" : ""}</div></td><td>${esc(v.classe || "")}</td><td class="r">${brl(v.valor)}</td><td class="r">${v.rentab_12m != null ? pct(v.rentab_12m, 2) : "—"}</td><td>${v.vencimento ? dataBR(v.vencimento) : "—"}</td><td class="r">${v.origem === "manual" ? `<button class="icon-btn" data-act="edit-inv" data-id="${v.id}" aria-label="Editar ${esc(v.nome)}">${ic("lapis", "sm")}</button>` : ""}</td></tr>`).join("")}
+        ${todos.map((v) => `<tr><td>${esc(v.nome)}<div class="faint" style="font-size:12px">${esc(v.instituicao || "")}${v.origem === "openfinance" ? " · Open Finance" : ""}</div></td><td>${esc(v.classe || "")}</td><td class="r">${brl(v.valor)}</td><td class="r">${celRentab(v)}</td><td>${v.vencimento ? dataBR(v.vencimento) : "—"}</td><td class="r">${v.origem === "manual" ? `<button class="icon-btn" data-act="edit-inv" data-id="${v.id}" aria-label="Editar ${esc(v.nome)}">${ic("lapis", "sm")}</button>` : ""}</td></tr>`).join("")}
         </tbody></table></div>
         ${m?.indicadores ? `<p class="source">Referências: CDI ${pct(m.indicadores.cdi?.valor ?? 0, 2)} a.a. · IPCA ${pct(m.indicadores.ipca12m?.valor ?? 0, 2)} em 12 meses.</p>` : ""}`
         : vazio("", "Nenhum investimento ainda", "Lance suas aplicações (Tesouro, CDB, fundos, ações, cripto) ou sincronize pelo Meu Pluggy. Ninguém mais vê esta carteira.", `<button class="btn btn-primary btn-sm" data-act="novo-inv">Novo investimento</button>`)}

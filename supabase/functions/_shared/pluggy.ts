@@ -1,6 +1,7 @@
 // Lógica compartilhada da importação do Meu Pluggy (somente leitura).
 import type { SupabaseClient } from "jsr:@supabase/supabase-js@2";
 import { addDays, day, http, monthOf, r2, todayISO, UserError } from "./http.ts";
+import { criarIndexadores, rentab12 } from "./rentab.ts";
 
 const PLUGGY = "https://api.pluggy.ai";
 const CLIENT_ID = Deno.env.get("PLUGGY_CLIENT_ID") || "";
@@ -74,6 +75,7 @@ export async function sincronizar(itemIds: string[], userId: string) {
   const contas: any[] = [];
   const cartoes: any[] = [];
   const investimentos: any[] = [];
+  const indexadores = criarIndexadores(hoje);
   const transacoes: any[] = [];
   const falhas: any[] = [];
 
@@ -149,10 +151,14 @@ export async function sincronizar(itemIds: string[], userId: string) {
         const r = await pluggy("investments", { itemId, pageSize: 500, page: p });
         for (const v of r.results || []) {
           if (v.status === "TOTAL_WITHDRAWAL") continue;
+          const rt = await rentab12(v, indexadores);
           investimentos.push({
             id: v.id, conexao, nome: v.name, classe: CLASSE[v.subtype] || TIPO[v.type] || v.type,
             instituicao: v.institution?.name || v.issuer || conexao || "", valor: r2(v.balance),
-            aplicado: r2(v.amountOriginal), rentab12m: v.lastTwelveMonthsRate ?? null,
+            aplicado: r2(v.amountOriginal), rentab12m: rt ? r2(rt.valor) : null,
+            rentabNota: rt?.nota || null, rentabFonte: rt?.fonte || null,
+            indexador: v.rateType || null, taxa: v.rate ?? null, taxaPre: v.fixedAnnualRate ?? null,
+            aplicadoEm: day(v.purchaseDate || v.issueDate),
             vencimento: day(v.dueDate), dataReferencia: day(v.date),
           });
         }
