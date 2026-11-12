@@ -1588,7 +1588,10 @@ function pAjustes() {
       <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
       ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button><button class="btn btn-ghost btn-sm" data-act="guia-pluggy">${ic("livro", "sm")}Como conectar</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="guia-pluggy">${ic("livro", "sm")}Como conectar</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
+      <details class="avancado" data-avancado ${S.avancadoBancos ? "open" : ""}><summary>${ic("dir", "sm")}Avançado</summary>
+        <p class="faint">Só para suporte: ligar uma conexão que já existe na Pluggy colando o Item ID dela. Conexões feitas assim não atualizam sozinhas; o normal é usar <strong>Conectar banco</strong>.</p>
+        <div><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button></div></details>
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
@@ -2119,6 +2122,10 @@ async function conectarBanco() {
     toast(erroMsg(err), true);
   }
 }
+
+document.addEventListener("toggle", (e) => {
+  if (e.target?.matches?.("details[data-avancado]")) S.avancadoBancos = e.target.open;
+}, true);
 
 /* ------------------------------------------------------------------ ações */
 document.addEventListener("click", async (e) => {

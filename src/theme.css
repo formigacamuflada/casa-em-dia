@@ -2775,3 +2775,37 @@ dialog.sheet {
     margin-top: 4px;
   }
 }
+
+/* Ajustes → Bancos: "Avançado" recolhido (Usar Item ID) */
+details.avancado {
+  margin-top: 4px;
+}
+details.avancado > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-3);
+  padding: 4px 0;
+  user-select: none;
+}
+details.avancado > summary::-webkit-details-marker {
+  display: none;
+}
+details.avancado > summary .i {
+  transition: transform 0.2s;
+}
+details.avancado[open] > summary .i {
+  transform: rotate(90deg);
+}
+details.avancado > summary:hover {
+  color: var(--text-2);
+}
+details.avancado > p {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 6px 0 10px;
+}
