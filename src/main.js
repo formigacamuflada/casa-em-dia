@@ -398,11 +398,11 @@ async function start() {
     reloadTimer = setTimeout(reload, 350);
   });
   refreshMercado();
-  // Guia do Meu Pluggy: abre sozinho enquanto a pessoa não conectou nenhum banco
-  // e não marcou "Não mostrar novamente". "Ver mais tarde" = volta na próxima abertura.
-  if (!D().itens?.length && !guiaDesligado(S.session?.user)) {
+  // Guia do Meu Pluggy: abre sozinho a cada abertura do app até a pessoa marcar
+  // "Não mostrar novamente". "Ver mais tarde" = volta na próxima abertura.
+  if (!guiaDesligado(S.session?.user)) {
     setTimeout(() => {
-      if (S.data && !D().itens?.length && !sheet()?.open && !document.querySelector("dialog[open]")) abrirGuia();
+      if (S.data && !guiaDesligado(S.session?.user) && !document.querySelector("dialog[open]")) abrirGuia();
     }, 1800);
   }
 }
