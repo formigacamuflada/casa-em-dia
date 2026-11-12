@@ -2523,3 +2523,255 @@ dialog.sheet {
   line-height: 1.45;
   color: var(--text-3);
 }
+
+/* ---- gastos do mês nos bancos: rosca segmentada + lista por grupo/categoria ---- */
+.c-gastos .gx {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) 1fr;
+  gap: 28px;
+  align-items: start;
+}
+.gx-l {
+  display: grid;
+  gap: 14px;
+}
+.donut {
+  position: relative;
+  width: 100%;
+  max-width: 260px;
+  aspect-ratio: 1;
+  margin: 0 auto;
+}
+.donut svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.dn-seg {
+  cursor: pointer;
+  transition: opacity 0.2s, stroke-width 0.2s;
+}
+.donut:hover .dn-seg:not(:hover) {
+  opacity: 0.45;
+}
+.dn-c {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.dn-c strong {
+  font-size: clamp(22px, 2.4vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.dn-c span {
+  color: var(--text-3);
+  font-size: 14px;
+  margin-top: 2px;
+}
+.gx-kv {
+  margin: 0;
+}
+.gx-r {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.gx-list {
+  display: grid;
+  gap: 8px;
+}
+.gx-row {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.gx-h {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px 10px 10px;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.gx-h > svg {
+  color: var(--text-3);
+  flex: none;
+}
+.gx-ic {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-shadow: 0 6px 16px -6px var(--c);
+}
+.gx-ic svg {
+  width: 20px;
+  height: 20px;
+}
+.gx-n {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.gx-h .gx-n b {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gx-n small {
+  color: var(--text-3);
+  font-size: 13px;
+}
+.gx-h strong {
+  font-weight: 650;
+  white-space: nowrap;
+}
+.gx-dentro {
+  border-top: 1px solid var(--border);
+  margin: 0 14px;
+  padding: 8px 0 10px;
+  display: grid;
+  gap: 4px;
+}
+.gx-sub {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 6px;
+}
+.gx-s {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.gx-s .gx-n {
+  font-size: 15px;
+}
+.gx-i {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--c);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.gx-s strong {
+  font-weight: 600;
+}
+.gx-tx {
+  display: grid;
+}
+.gx-t {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px dashed var(--border);
+}
+.gx-sub + .gx-tx .gx-t:first-child {
+  border-top: 1px solid var(--border);
+}
+.gx-t > div {
+  display: grid;
+  min-width: 0;
+}
+.gx-t span {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gx-t small {
+  color: var(--text-3);
+  font-size: 12px;
+}
+.gx-t strong {
+  font-weight: 600;
+  font-size: 14px;
+}
+.gx-mais {
+  justify-self: center;
+  background: none;
+  border: 0;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.gx-mais:hover {
+  color: var(--accent-ink);
+}
+.gx-extra {
+  margin-top: 4px;
+}
+.gx-tt {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.gx-aviso {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--neg) 10%, transparent);
+  color: var(--text-2);
+  font-size: 13px;
+}
+.gx-aviso svg {
+  color: var(--neg);
+  flex: none;
+}
+@media (max-width: 1180px) {
+  .c-gastos .gx {
+    grid-template-columns: 1fr;
+  }
+  .donut {
+    max-width: 240px;
+  }
+}
+
+/* entrada: as fatias da rosca se desenham uma depois da outra */
+.anima .dn-seg {
+  animation: en-rosca calc(0.9s * var(--t)) cubic-bezier(0.3, 0.7, 0.2, 1) both;
+  animation-delay: calc(var(--d, 0ms) + 200ms * var(--t) + var(--k, 0) * 90ms * var(--t));
+}
+@keyframes en-rosca {
+  from { stroke-dasharray: 0 600; opacity: 0; }
+}
+.anima .dn-c {
+  animation: en-numero calc(0.6s * var(--t)) ease-out both;
+  animation-delay: calc(var(--d, 0ms) + 350ms * var(--t));
+}
+@media (max-width: 640px) {
+  .c-gastos .ctop {
+    flex-wrap: wrap;
+  }
+  .c-gastos .ctop > .btn {
+    order: 5;
+    flex-basis: 100%;
+    justify-content: center;
+    margin-top: 4px;
+  }
+}

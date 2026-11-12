@@ -79,13 +79,24 @@ export async function sincronizar(itemIds: string[], userId: string) {
   const transacoes: any[] = [];
   const falhas: any[] = [];
 
-  let categorias = new Map<string, string>();
+  // Categorias da Pluggy: nome traduzido e categoria-mãe (o "grupo", ex.: Alimentação → Supermercado).
+  const categorias = new Map<string, { nome: string; pai: string | null }>();
   try {
-    const r = await pluggy("categories");
-    categorias = new Map((r.results || []).map((c: any) => [c.id, c.descriptionTranslated || c.description]));
+    let p = 1;
+    let total = 1;
+    do {
+      const r = await pluggy("categories", { page: p, pageSize: 500 });
+      for (const c of r.results || []) {
+        categorias.set(c.id, { nome: c.descriptionTranslated || c.description, pai: c.parentId || null });
+      }
+      total = r.totalPages || 1;
+      p += 1;
+    } while (p <= total && p <= 5);
   } catch {
     // segue sem tradução
   }
+  const nomeCat = (id: string | null | undefined) => (id && categorias.get(id)?.nome) || null;
+  const itensInfo: any[] = [];
 
   for (const itemId of itemIds) {
     let item: any;
@@ -101,6 +112,10 @@ export async function sincronizar(itemIds: string[], userId: string) {
       continue;
     }
     const conexao = item?.connector?.name || null;
+    itensInfo.push({
+      itemId, conexao, status: item?.status || null, execucao: item?.executionStatus || null,
+      atualizadoEm: item?.lastUpdatedAt || null, proximaEm: item?.nextAutoSyncAt || null,
+    });
     try {
       const page = await pluggy("accounts", { itemId });
       for (const a of page.results || []) {
@@ -122,14 +137,21 @@ export async function sincronizar(itemIds: string[], userId: string) {
           let p = 1;
           let total = 1;
           do {
-            const r = await pluggy("transactions", { accountId: a.id, from: desde, to: hoje, pageSize: 500, page: p });
+            const r = await pluggy("transactions", { accountId: a.id, from: desde, to: addDays(hoje, 1), pageSize: 500, page: p });
             for (const t of r.results || []) {
-              const valor = (t.type === "DEBIT" ? -1 : 1) * Math.abs(Number(t.amount) || 0);
-              const categoria = (t.categoryId && categorias.get(t.categoryId)) || t.category || "Sem categoria";
+              const bruto = Number(t.amount) || 0;
+              // Cartão de crédito: valor positivo é compra (aumenta a fatura), negativo é pagamento ou estorno.
+              // Conta: DEBIT é saída, CREDIT é entrada.
+              const saida = a.type === "CREDIT" ? bruto > 0 : t.type ? t.type === "DEBIT" : bruto < 0;
+              const valor = (saida ? -1 : 1) * Math.abs(bruto);
+              const categoria = nomeCat(t.categoryId) || t.category || "Sem categoria";
+              const pai = t.categoryId ? categorias.get(t.categoryId)?.pai || `${String(t.categoryId).slice(0, 2)}000000` : null;
+              const grupo = (pai && pai !== t.categoryId && nomeCat(pai)) || categoria;
               transacoes.push({
                 data: day(t.date), descricao: t.description,
                 comerciante: t.merchant?.name || t.merchant?.businessName || null,
-                valor: r2(valor), categoria, conta: nome,
+                valor: r2(valor), categoria, grupo, conta: nome, cartao: a.type === "CREDIT",
+                pendente: t.status === "PENDING",
                 interno: INTERNO_CATEGORIA.test(t.category || "") || INTERNO_CATEGORIA.test(categoria) ||
                   INTERNO_DESCRICAO.test(t.description || ""),
               });
@@ -182,20 +204,34 @@ export async function sincronizar(itemIds: string[], userId: string) {
     const saidas = list.filter((t) => t.valor < 0);
     const entradas = list.filter((t) => t.valor > 0);
     const totalSaidas = saidas.reduce((s, t) => s + Math.abs(t.valor), 0);
-    const porCat = new Map<string, number>();
-    for (const t of saidas) porCat.set(t.categoria, (porCat.get(t.categoria) || 0) + Math.abs(t.valor));
+    const porCat = new Map<string, { grupo: string; total: number; n: number }>();
+    for (const t of saidas) {
+      const c = porCat.get(t.categoria) || { grupo: t.grupo || t.categoria, total: 0, n: 0 };
+      c.total += Math.abs(t.valor);
+      c.n += 1;
+      porCat.set(t.categoria, c);
+    }
     return {
       mes,
       saidas: r2(totalSaidas),
       entradas: r2(entradas.reduce((s, t) => s + t.valor, 0)),
       por_categoria: [...porCat.entries()]
-        .map(([categoria, total]) => ({ categoria, total: r2(total) }))
+        .map(([categoria, c]) => ({ categoria, grupo: c.grupo, total: r2(c.total), n: c.n }))
         .sort((a, b) => (b.total as number) - (a.total as number)),
       maiores: saidas
         .slice()
         .sort((a, b) => a.valor - b.valor)
         .slice(0, 10)
         .map((t) => ({ data: t.data, descricao: t.comerciante || t.descricao, valor: t.valor, categoria: t.categoria })),
+      // Saídas do mês, da mais recente para a mais antiga (para abrir cada categoria no app).
+      transacoes: saidas
+        .slice()
+        .sort((a, b) => String(b.data).localeCompare(String(a.data)) || a.valor - b.valor)
+        .slice(0, 400)
+        .map((t) => ({
+          data: t.data, descricao: t.comerciante || t.descricao, valor: t.valor, categoria: t.categoria,
+          grupo: t.grupo, conta: t.conta, cartao: t.cartao, pendente: t.pendente,
+        })),
     };
   });
 
@@ -223,7 +259,7 @@ export async function sincronizar(itemIds: string[], userId: string) {
     .slice(0, 15)
     .map(({ descricao, valor }) => ({ descricao, valor }));
 
-  return { contas, cartoes, investimentos, gastos, assinaturas, falhas };
+  return { contas, cartoes, investimentos, gastos, assinaturas, falhas, itens: itensInfo };
 }
 
 
@@ -249,7 +285,7 @@ export async function sincronizarUsuario(admin: SupabaseClient, userId: string) 
   const agora = new Date().toISOString();
   const { error: e1 } = await admin.from("importacoes").upsert({
     user_id: userId, atualizado_em: agora, fonte: "Meu Pluggy",
-    contas: r.contas, cartoes: r.cartoes, investimentos: r.investimentos, falhas: r.falhas,
+    contas: r.contas, cartoes: r.cartoes, investimentos: r.investimentos, falhas: r.falhas, itens: r.itens,
   });
   if (e1) throw e1;
   if (r.gastos.length) {
@@ -258,5 +294,11 @@ export async function sincronizarUsuario(admin: SupabaseClient, userId: string) 
     );
     if (e2) throw e2;
   }
-  return { atualizadoEm: agora, contas: r.contas.length, cartoes: r.cartoes.length, investimentos: r.investimentos.length, meses: r.gastos.length, falhas: r.falhas };
+  const mesAtual = todayISO().slice(0, 7);
+  const doMes = r.gastos.find((g) => g.mes === mesAtual);
+  return {
+    atualizadoEm: agora, contas: r.contas.length, cartoes: r.cartoes.length, investimentos: r.investimentos.length,
+    meses: r.gastos.length, gastosMes: doMes ? doMes.transacoes.length : 0, falhas: r.falhas,
+    bancosAtualizadosEm: r.itens.map((i) => i.atualizadoEm).filter(Boolean).sort()[0] || null,
+  };
 }

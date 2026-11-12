@@ -26,6 +26,9 @@ const S = {
   syncing: false,
   diaSel: null,
   moradiaBase: "meu",
+  gastosVisao: "grupo",
+  gastoAberto: null,
+  gastoTodas: false,
   ccSel: 0,
   range: {},
 };
@@ -633,7 +636,7 @@ function route() {
    contam do zero, barras crescem, linhas dos gráficos se desenham, ícones
    aparecem. Ao trocar de página, a mesma coisa mais curta e sem contagem.
    Atualizações em tempo real não animam (render() desliga a classe). */
-const ITENS_ANIMADOS = ".bill, .todo-row, .mor-it, .meta-it, .cc-row, .day-pills > *, .stats > .stat, .who-list > *, .sb-legend > *, .kv > *, .hist-axis";
+const ITENS_ANIMADOS = ".gx-row, .bill, .todo-row, .mor-it, .meta-it, .cc-row, .day-pills > *, .stats > .stat, .who-list > *, .sb-legend > *, .kv > *, .hist-axis";
 let fimAnima = null;
 function animarEntrada(modo) {
   const raiz = document.documentElement;
@@ -1246,12 +1249,147 @@ function blocoRenda() {
       .join("")}<dt style="font-weight:600;color:var(--text)">Total</dt><dd>${total !== null ? brl(total) : "—"}</dd></dl></section>`;
 }
 
+/* ---------------------------------------------------- gastos do mês nos bancos
+   Rosca segmentada (como no app do Meu Pluggy) + lista por grupo ou categoria.
+   Grupo = categoria-mãe da Pluggy (ex.: Alimentação → Supermercado, Delivery). */
+const COR_GASTO = ["#F5813A", "#4FC463", "#9B5CF0", "#E8559C", "#4F8EF7", "#E8B23A", "#3FB8A8"];
+const COR_OUTROS = "#8B8F98";
+function iconeGasto(nome) {
+  const n = String(nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (/supermerc|mercado|feira|hortifr|padaria|acougue/.test(n)) return "carrinho";
+  if (/restaura|bares?\b|lanchon|aliment|delivery|comida|ifood|cafe/.test(n)) return "garfo";
+  if (/viage|hotel|hosped|passage|aere|turism/.test(n)) return "aviao";
+  if (/transport|uber|taxi|combust|estacion|pedag|veicul|carro|mobilid|onibus|metro/.test(n)) return "carro";
+  if (/saude|farmac|drogar|medic|hospit|odonto|academia|bem-estar|otica/.test(n)) return "saude";
+  if (/educa|curso|escola|faculd|livr/.test(n)) return "livro";
+  if (/streaming|assinatura|digital|software|aplicativ/.test(n)) return "play";
+  if (/lazer|entreten|cinema|show|esporte|jogo|evento|bar e balada/.test(n)) return "festa";
+  if (/compra|vestu|roupa|eletron|loja|shopping|presente|beleza|cosmet/.test(n)) return "sacola";
+  if (/aluguel|condom|moradia|casa|imovel|habitac/.test(n)) return "casa";
+  if (/energia|eletric|\bluz\b/.test(n)) return "raio";
+  if (/agua|saneam/.test(n)) return "gota";
+  if (/internet|telefon|celular|telecom/.test(n)) return "wifi";
+  if (/seguro/.test(n)) return "escudo";
+  if (/imposto|tribut|governo|obrigac/.test(n)) return "doc";
+  if (/transfer|pix|ted\b|doc\b/.test(n)) return "setas";
+  if (/financ|tarifa|juros|banc|emprest|cartao|multa|iof|investim/.test(n)) return "cofre";
+  return "carteira";
+}
+function brlCurto(v) {
+  const a = Math.abs(Number(v) || 0);
+  if (a >= 1e6) return `R$ ${num(a / 1e6, 1)} mi`;
+  if (a >= 1e4) return `R$ ${num(a / 1e3, 0)} mil`;
+  if (a >= 1e3) return `R$ ${num(a / 1e3, 1)} mil`;
+  return brl(a);
+}
+function fatiasGastos(g, visao) {
+  const cats = (g.por_categoria || []).map((c) => ({ ...c, grupo: c.grupo || c.categoria }));
+  let itens;
+  if (visao === "grupo") {
+    const mapa = new Map();
+    for (const c of cats) {
+      const it = mapa.get(c.grupo) || { nome: c.grupo, total: 0, filhos: [] };
+      it.total += c.total;
+      it.filhos.push(c);
+      mapa.set(c.grupo, it);
+    }
+    itens = [...mapa.values()];
+  } else itens = cats.map((c) => ({ nome: c.categoria, total: c.total, filhos: [], grupo: c.grupo }));
+  itens.sort((a, b) => b.total - a.total);
+  const total = sum(itens.map((i) => i.total)) || 1;
+  // Até 6 fatias com cor própria; o resto (e o que for menor que 3%) vira "Outros" na rosca.
+  itens.forEach((it, i) => {
+    it.pct = it.total / total;
+    it.cor = i < 6 && it.pct >= 0.03 ? COR_GASTO[i] : COR_OUTROS;
+  });
+  const fortes = itens.filter((i) => i.cor !== COR_OUTROS);
+  const resto = itens.filter((i) => i.cor === COR_OUTROS);
+  const fatias = resto.length ? [...fortes, { nome: "Outros", total: sum(resto.map((i) => i.total)), cor: COR_OUTROS, outros: true }] : fortes;
+  return { itens, fatias, total };
+}
+function roscaGastos(fatias, total) {
+  const R = 84, SW = 17, C = 2 * Math.PI * R;
+  const gap = fatias.length > 1 ? SW + 9 : 0;
+  let pos = 0;
+  const segs = fatias
+    .map((f, i) => {
+      const len = (f.total / total) * C;
+      const vis = Math.max(len - gap, 0.01);
+      const s = `<circle class="dn-seg" style="--k:${i}" r="${R}" cx="110" cy="110" fill="none" stroke="${f.cor}" stroke-width="${SW}" stroke-linecap="round" stroke-dasharray="${vis.toFixed(2)} ${C.toFixed(2)}" stroke-dashoffset="${(-(pos + gap / 2)).toFixed(2)}" ${f.outros ? "" : `data-act="gasto-abre" data-v="${esc(f.nome)}"`} data-tip="${esc(f.nome)}: ${brl(f.total)} · ${Math.round((f.total / total) * 100)}%"/>`;
+      pos += len;
+      return s;
+    })
+    .join("");
+  return `<div class="donut"><svg viewBox="0 0 220 220" role="img" aria-label="Gastos do mês por ${S.gastosVisao === "grupo" ? "grupo" : "categoria"}"><g transform="rotate(-90 110 110)">${segs}</g></svg>
+    <div class="dn-c"><strong>${brlCurto(total)}</strong><span>gastos esse mês</span></div></div>`;
+}
+function linhasTransacoes(lista, limite) {
+  if (!lista.length) return "";
+  const mostra = lista.slice(0, limite);
+  return `<div class="gx-tx">${mostra
+    .map((t) => `<div class="gx-t"><div><span>${esc(t.descricao)}</span><small>${dataBR(t.data)}${t.conta ? ` · ${esc(t.conta)}` : ""}${t.pendente ? " · a confirmar" : ""}</small></div><strong class="num">${brl(Math.abs(t.valor))}</strong></div>`)
+    .join("")}</div>`;
+}
+function blocoGastosBancos(g, imp) {
+  const bancosEm = (imp?.itens || []).map((i) => i.atualizadoEm).filter(Boolean).sort()[0];
+  const sub = imp ? `Meu Pluggy · ${bancosEm ? `bancos atualizados em ${horaBR(bancosEm)}` : `sincronizado em ${horaBR(imp.atualizado_em)}`}` : "Open Finance";
+  const btn = `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar"}</button>`;
+  const cab = cardHead("envelope", "Gastos do mês nos bancos", sub, "pessoal", btn);
+  const aviso = `<p class="source">O Meu Pluggy busca os dados nos bancos uma vez por dia; Sincronizar traz para cá o que ele já tem. Pagamento de fatura, transferências entre contas próprias, aplicações e resgates ficam de fora.</p>`;
+  const falhas = (imp?.falhas || []).length
+    ? `<div class="gx-aviso">${ic("alerta", "sm")}<div>${imp.falhas.slice(0, 3).map((f) => esc(f.erro || "Falha ao ler uma conexão")).join("<br>")}</div></div>`
+    : "";
+  if (!g || !(g.por_categoria || []).length) {
+    const corpo = D().itens.length
+      ? vazio("", "Ainda sem gastos importados deste mês", "Toque em Sincronizar para buscar as transações no Meu Pluggy.")
+      : vazio("", "Conecte seus bancos", "Autorize pelo app do banco (Open Finance). O app busca extratos, cartões e investimentos, e só você vê.", `<button class="btn btn-primary btn-sm" data-act="conectar-banco">Conectar banco</button>`);
+    return `<section class="card s7 m12 t12">${cab}${falhas}${corpo}${D().itens.length ? aviso : ""}</section>`;
+  }
+  const visao = S.gastosVisao;
+  const { itens, fatias, total } = fatiasGastos(g, visao);
+  const txs = g.transacoes || [];
+  const linhas = itens
+    .map((it) => {
+      const aberto = S.gastoAberto === it.nome;
+      const doItem = txs.filter((t) => (visao === "grupo" ? (t.grupo || t.categoria) === it.nome : t.categoria === it.nome));
+      let dentro = "";
+      if (aberto) {
+        const filhos = visao === "grupo" && it.filhos.length > 1
+          ? `<div class="gx-sub">${it.filhos
+              .sort((a, b) => b.total - a.total)
+              .map((c) => `<div class="gx-s"><span class="gx-i">${ic(iconeGasto(c.categoria), "sm")}</span><span class="gx-n">${esc(c.categoria)}</span><strong class="num">${brl(c.total)}</strong></div>`)
+              .join("")}</div>`
+          : "";
+        const lim = S.gastoTodas ? 400 : 5;
+        dentro = `<div class="gx-dentro">${filhos}${linhasTransacoes(doItem, lim)}${doItem.length > 5 ? `<button class="gx-mais" data-act="gasto-todas">${S.gastoTodas ? "Mostrar menos" : `Ver todas as ${doItem.length} transações`}</button>` : ""}</div>`;
+      }
+      return `<div class="gx-row${aberto ? " aberto" : ""}" style="--c:${it.cor}">
+        <button class="gx-h" data-act="gasto-abre" data-v="${esc(it.nome)}" aria-expanded="${aberto}">
+          <span class="gx-ic">${ic(iconeGasto(it.nome), "sm")}</span>
+          <span class="gx-n"><b>${esc(it.nome)}</b><small>${Math.round(it.pct * 100)}%</small></span>
+          <strong class="num">${brl(it.total)}</strong>${ic(aberto ? "cima" : "baixo", "sm")}
+        </button>${dentro}</div>`;
+    })
+    .join("");
+  const assin = (g.assinaturas || []).length
+    ? `<div class="gx-extra"><p class="gx-tt">Prováveis assinaturas</p><dl class="kv">${g.assinaturas.slice(0, 6).map((a) => `<dt>${esc(a.descricao)}</dt><dd>${brl(a.valor)}</dd>`).join("")}</dl></div>`
+    : "";
+  return `<section class="card s7 m12 t12 c-gastos">${cab}${falhas}
+    <div class="gx">
+      <div class="gx-l">${roscaGastos(fatias, total)}
+        <dl class="kv gx-kv"><dt>Saídas</dt><dd>${brl(g.saidas)}</dd><dt>Entradas</dt><dd>${brl(g.entradas)}</dd></dl></div>
+      <div class="gx-r">
+        <div class="seg-ctl wide" role="group" aria-label="Agrupar gastos"><button data-act="gasto-visao" data-v="cat" aria-pressed="${visao === "cat"}">Categorias</button><button data-act="gasto-visao" data-v="grupo" aria-pressed="${visao === "grupo"}">Grupos</button></div>
+        <div class="gx-list">${linhas}</div>
+      </div>
+    </div>${assin}${aviso}</section>`;
+}
+
 function pMinhas() {
   const itens = contasDoMes(D(), S.month, "pessoal");
   const total = sum(itens.map((i) => i.valorMes));
   const g = D().gastos.find((x) => x.mes === S.month);
   const imp = D().importacao;
-  const maxCat = g ? Math.max(...(g.por_categoria || []).map((c) => c.total), 1) : 1;
   const saldoTotal = imp ? sum((imp.contas || []).map((c) => c.saldo)) : 0;
   return `${pageHead("Minhas contas", "Só você vê esta página.", `<button class="btn btn-primary" data-act="nova-conta" data-escopo="pessoal">${ic("mais", "sm")}Nova conta pessoal</button>`)}
   <div class="grid">
@@ -1261,14 +1399,7 @@ function pMinhas() {
     <section class="card s5 m12 t12">${cardHead("pote", "Dia a dia", "Quanto você reserva por mês para gastos soltos", "pessoal")}
       ${money(D().prefs?.dia_a_dia || 0)}<div><button class="btn btn-sm" data-act="diadia">Ajustar valor</button></div>
     </section>
-    <section class="card s7 m12 t12">${cardHead("envelope", "Gastos do mês nos bancos", imp ? `Open Finance · atualizado em ${horaBR(imp.atualizado_em)}` : "Open Finance", "pessoal", `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar"}</button>`)}
-      ${g ? `<dl class="kv"><dt>Saídas</dt><dd>${brl(g.saidas)}</dd><dt>Entradas</dt><dd>${brl(g.entradas)}</dd></dl>
-        <div class="hbars">${(g.por_categoria || []).slice(0, 8).map((c) => `<div class="hbar"><span>${esc(c.categoria)}</span><span class="val">${brl(c.total)}</span><div class="track"><div class="fill" style="width:${((c.total / maxCat) * 100).toFixed(1)}%" data-tip="${esc(c.categoria)}: ${brl(c.total)}"></div></div></div>`).join("")}</div>
-        ${(g.maiores || []).length ? `<div class="table-wrap"><table class="t"><thead><tr><th>Maiores gastos</th><th>Data</th><th class="r">Valor</th></tr></thead><tbody>${g.maiores.slice(0, 6).map((t) => `<tr><td>${esc(t.descricao)}</td><td class="faint">${dataBR(t.data)}</td><td class="r">${brl(Math.abs(t.valor))}</td></tr>`).join("")}</tbody></table></div>` : ""}
-        ${(g.assinaturas || []).length ? `<div><p style="font-weight:600;font-size:14px;margin-bottom:6px">Prováveis assinaturas</p><dl class="kv">${g.assinaturas.slice(0, 6).map((a) => `<dt>${esc(a.descricao)}</dt><dd>${brl(a.valor)}</dd>`).join("")}</dl></div>` : ""}
-        <p class="source">Pagamentos de fatura, transferências entre contas próprias, aplicações e resgates ficam de fora.</p>`
-        : D().itens.length ? vazio("", "Ainda sem gastos importados deste mês", "Toque em Sincronizar para buscar as transações no Meu Pluggy.") : vazio("", "Conecte seus bancos", "Autorize pelo app do banco (Open Finance). O app busca extratos, cartões e investimentos, e só você vê.", `<button class="btn btn-primary btn-sm" data-act="conectar-banco">Conectar banco</button>`)}
-    </section>
+    ${blocoGastosBancos(g, imp)}
     <section class="card s5 m12 t12">${cardHead("pote", "Saldos nas contas", imp ? `Atualizado em ${horaBR(imp.atualizado_em)}` : "", "pessoal")}
       ${imp && (imp.contas || []).length ? `${money(saldoTotal)}<dl class="kv">${imp.contas.map((c) => `<dt>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</dt><dd>${brl(c.saldo)}</dd>`).join("")}</dl>` : `<p class="faint">Os saldos aparecem depois da primeira sincronização com o Meu Pluggy.</p>`}
     </section>
@@ -1926,7 +2057,9 @@ async function sincronizarAgora() {
   render();
   try {
     const r = await api.sincronizarBancos();
-    toast(`Sincronizado: ${r.contas} contas, ${r.cartoes} cartões, ${r.investimentos} investimentos.`);
+    const mes = mesNome(curYM()).toLowerCase();
+    const bancos = r.bancosAtualizadosEm ? ` O Meu Pluggy atualizou os bancos em ${horaBR(r.bancosAtualizadosEm)}.` : "";
+    toast(`Sincronizado: ${r.gastosMes ?? 0} gastos em ${mes}, ${r.contas} contas, ${r.cartoes} cartões.${bancos}${(r.falhas || []).length ? ` ${r.falhas.length} aviso(s).` : ""}`);
   } catch (err) {
     toast(erroMsg(err), true);
   }
@@ -2036,6 +2169,9 @@ document.addEventListener("click", async (e) => {
     case "tema-troca": aplicarTema(temaAtual() === "escuro" ? "claro" : "escuro"); renderShell(); return render();
     case "dia-sel": S.diaSel = S.diaSel === Number(t.dataset.v) ? null : Number(t.dataset.v); return render();
     case "mor-base": S.moradiaBase = t.dataset.v; return render();
+    case "gasto-visao": S.gastosVisao = t.dataset.v; S.gastoAberto = null; S.gastoTodas = false; return render();
+    case "gasto-abre": S.gastoAberto = S.gastoAberto === t.dataset.v ? null : t.dataset.v; S.gastoTodas = false; return render();
+    case "gasto-todas": S.gastoTodas = !S.gastoTodas; return render();
     case "cc-sel": {
       const n = todosCartoes().proprios.length;
       S.ccSel = ((Number(t.dataset.v) % n) + n) % n;
