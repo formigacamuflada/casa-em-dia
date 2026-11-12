@@ -64,6 +64,11 @@ export function createApi() {
         const { error } = await sb.auth.updateUser({ password });
         fail(error);
       },
+      // Preferências pequenas da pessoa (ex.: não mostrar o guia de novo), guardadas na conta.
+      async salvarMeta(data) {
+        const { error } = await sb.auth.updateUser({ data });
+        fail(error);
+      },
       async signOut() {
         await sb.auth.signOut();
       },

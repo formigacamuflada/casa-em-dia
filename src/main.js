@@ -2,6 +2,7 @@ import "./styles.css";
 import "./theme.css";
 import { logoAnimado, logoCompleto, logoSimbolo } from "./logo.js";
 import { campoData, ligarDatas } from "./datas.js";
+import { abrirGuiaPluggy, guiaDesligado } from "./guia.js";
 ligarDatas();
 import { createApi } from "./api.js";
 import { ic } from "./icons.js";
@@ -397,6 +398,26 @@ async function start() {
     reloadTimer = setTimeout(reload, 350);
   });
   refreshMercado();
+  // Guia do Meu Pluggy: abre sozinho enquanto a pessoa não conectou nenhum banco
+  // e não marcou "Não mostrar novamente". "Ver mais tarde" = volta na próxima abertura.
+  if (!D().itens?.length && !guiaDesligado(S.session?.user)) {
+    setTimeout(() => {
+      if (S.data && !D().itens?.length && !sheet()?.open && !document.querySelector("dialog[open]")) abrirGuia();
+    }, 1800);
+  }
+}
+function abrirGuia() {
+  abrirGuiaPluggy({
+    user: S.session?.user,
+    onConectar: () => conectarBanco(),
+    onNunca: async (nunca) => {
+      try {
+        await api.auth.salvarMeta({ guia_pluggy: nunca ? "nunca" : null });
+      } catch (e) {
+        console.error(e); // fica salvo pelo menos neste aparelho
+      }
+    },
+  });
 }
 async function reload() {
   if (!S.session) return;
@@ -1348,7 +1369,7 @@ function blocoGastosBancos(g, imp) {
   if (!g || !(g.por_categoria || []).length) {
     const corpo = D().itens.length
       ? vazio("", "Ainda sem gastos importados deste mês", "Toque em Sincronizar para buscar as transações no Meu Pluggy.")
-      : vazio("", "Conecte seus bancos", "Autorize pelo app do banco (Open Finance). O app busca extratos, cartões e investimentos, e só você vê.", `<button class="btn btn-primary btn-sm" data-act="conectar-banco">Conectar banco</button>`);
+      : vazio("", "Conecte seus bancos", "Autorize pelo app do banco (Open Finance). O app busca extratos, cartões e investimentos, e só você vê.", `<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"><button class="btn btn-primary btn-sm" data-act="conectar-banco">Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="guia-pluggy">Como conectar</button></div>`);
     return `<section class="card s7 m12 t12">${cab}${falhas}${corpo}${D().itens.length ? aviso : ""}</section>`;
   }
   const visao = S.gastosVisao;
@@ -1567,7 +1588,7 @@ function pAjustes() {
       <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
       ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="add-item">Usar Item ID</button><button class="btn btn-ghost btn-sm" data-act="guia-pluggy">${ic("livro", "sm")}Como conectar</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
@@ -2139,6 +2160,7 @@ document.addEventListener("click", async (e) => {
     case "edit-inv": return formInv(id);
     case "add-item": return formItem();
     case "conectar-banco": return conectarBanco();
+    case "guia-pluggy": return abrirGuia();
     case "rm-item": return act(() => api.removeItem(id), "Banco removido.");
     case "ask-del": { const c = $("#confirmDel"); if (c) { c.hidden = false; c.scrollIntoView({ block: "nearest" }); } return; }
     case "cancel-del": $("#confirmDel").hidden = true; return;
