@@ -1684,7 +1684,7 @@ function pAjustes() {
       ${D().importacao ? `<p class="source">Última sincronização: ${horaBR(D().importacao.atualizado_em)}${(D().importacao.falhas || []).length ? ` · ${D().importacao.falhas.length} aviso(s)` : ""}</p>` : ""}
     </section>
     ${ios ? `<section class="card s6 t12">${cardHead("", "Instalar no iPhone", "", "")}<p class="muted" style="font-size:14px">No Safari, toque em Compartilhar e depois em <strong>Adicionar à Tela de Início</strong>. O app abre em tela cheia, com ícone próprio.</p></section>` : ""}
-    <section class="card s6 t12">${cardHead("", "Tutoriais", "5 passos com o mais importante de cada aba", "")}
+    <section class="card s6 t12">${cardHead("", "Tutoriais", "O mais importante de cada aba, passo a passo", "")}
       <div class="tours-lista">${Object.entries(TOURS).map(([r, t]) => `<button class="btn btn-sm" data-act="tour-de" data-r="${r}">${ic("ajuda", "sm")}${esc(t.nome)}</button>`).join("")}</div>
       <label class="toggle"><span class="check"><input type="checkbox" data-tour-auto ${estadoTour(S.session?.user).off ? "" : "checked"}><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" style="stroke-width:2.5"/></svg></span>Mostrar sozinho na primeira visita a cada aba</label></section>
     <section class="card s6 t12">${cardHead("", "Aparência", "Vale só neste aparelho", "")}

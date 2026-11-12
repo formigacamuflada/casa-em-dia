@@ -1,4 +1,4 @@
-// Tutorial de cada aba: 5 passos com destaque no próprio app (o resto da tela escurece).
+// Tutorial de cada aba: 7 a 10 passos com destaque no próprio app (o resto da tela escurece).
 // Abre sozinho na primeira visita a cada aba; "Ver mais tarde" volta na próxima abertura
 // do app; "Concluir" marca a aba como vista; "Não mostrar tutoriais" desliga todos.
 import "./tour.css";
@@ -11,31 +11,41 @@ export const TOURS = {
   inicio: {
     nome: "Visão geral",
     passos: [
-      { alvo: S(".top .month"), titulo: "Tudo é do mês escolhido", texto: "As setas trocam o mês e <b>Mês atual</b> volta para hoje. Contas, saldo, divisão e gastos mudam juntos com o mês." },
-      { alvo: T("Saldo previsto"), titulo: "Saldo previsto: só você vê", texto: "Salário − sua metade da casa − suas contas pessoais − dia a dia. No dia a dia vale o <b>maior</b> entre o seu orçamento e o gasto real dos bancos, para não contar nada duas vezes." },
-      { alvo: T("Contas a pagar"), titulo: "Contas a pagar", texto: "As contas da casa e as suas pessoais do mês. Toque no círculo para marcar como paga. Fatura de cartão é das compras do mês e <b>vence no mês seguinte</b> (ex.: 07/12)." },
-      { alvo: T("Divisão da casa"), titulo: "Divisão 50/50", texto: "Soma as contas da casa e mostra quem paga quanto e quem faz o Pix para ficar meio a meio. Depois do Pix, marque o acerto como feito." },
-      { alvo: S(".top .lancar"), titulo: "Lançar e avisos", texto: "<b>Lançar</b> cria uma conta: <b>Da casa</b> (os dois veem e entra na divisão) ou <b>Pessoal</b> (só você). O sininho ao lado mostra o que a outra pessoa mudou." },
+      { alvo: S(".top .month"), titulo: "Tudo é do mês escolhido", texto: "As setas trocam o mês e <b>Mês atual</b> volta para hoje. Saldo, contas, divisão e gastos mudam juntos com o mês." },
+      { alvo: T("Saldo previsto"), titulo: "Saldo previsto: só você vê", texto: "Quanto deve sobrar do seu salário no mês: salário − sua metade da casa − suas contas pessoais − dia a dia. É uma previsão, não o saldo do banco." },
+      { alvo: S(".c-saldo .sb-legend"), fallback: T("Saldo previsto"), titulo: "Dia a dia: real × orçamento", texto: "Vale o <b>maior</b> entre o seu orçamento e o gasto real dos bancos. No começo do mês o saldo reserva o orçamento inteiro; se você passar dele, passa a usar o real. Toque em <b>ajustar</b> para mudar o orçamento." },
+      { alvo: T("Contas a pagar"), titulo: "Contas a pagar", texto: "Contas da casa e as suas pessoais do mês. Toque no <b>círculo</b> para marcar como paga. As bolinhas de dia filtram a lista." },
+      { alvo: T("Contas a pagar"), titulo: "Fatura vence no mês seguinte", texto: "Fatura de cartão é das <b>compras do mês</b> e vence no mês seguinte: aparece no fim da lista com a data (ex.: 07/12) e só fica atrasada depois dela." },
+      { alvo: T("Divisão da casa"), titulo: "Divisão 50/50", texto: "Soma as contas da casa, mostra quanto cada um pagou e <b>quem faz o Pix</b> para ficar meio a meio. Depois do Pix, toque em <b>Marcar feito</b>." },
+      { alvo: T("Cartões"), titulo: "Cartões do mês", texto: "Resumo das faturas e do limite livre. Os detalhes (somar nas contas, fatura paga, imagem do cartão) ficam na aba <b>Cartões</b>." },
+      { alvo: T("Metas do casal"), titulo: "Metas do casal", texto: "Os dois veem. Mostra quanto já foi guardado e quanto falta por mês para chegar no prazo. Aportes se registram em <b>Investimentos</b>." },
+      { alvo: T("Mercado"), titulo: "Mercado", texto: "Selic, IPCA, juro real e dólar, do Banco Central. Serve de contexto para metas e investimentos." },
+      { alvo: S(".top .lancar"), titulo: "Lançar e avisos", texto: "<b>Lançar</b> cria uma conta: <b>Da casa</b> (os dois veem e entra na divisão) ou <b>Pessoal</b> (só você). O <b>sininho</b> ao lado mostra o que a outra pessoa mudou." },
     ],
   },
   casa: {
     nome: "Nossa casa",
     passos: [
-      { alvo: T("Contas da casa"), titulo: "Tudo aqui os dois veem", texto: "Aluguel, condomínio, luz, mercado da casa… Cada conta mostra quem paga (bolinha de cada um). Só quem lançou pode torná-la pessoal." },
-      { alvo: S("#main .page-head .btn-primary"), titulo: "Nova conta da casa", texto: "Escolha se <b>repete todo mês</b> ou é só deste mês. Conta que muda de valor (como a luz) você edita só o valor do mês, sem mexer nos outros." },
-      { alvo: T("Divisão da casa"), titulo: "Quem devolve quanto", texto: "O app compara o que cada um pagou com a metade do total e diz quem faz o Pix. Fatura de cartão da casa entra pelo mês das compras." },
-      { alvo: T("Renda do casal"), titulo: "Renda do casal", texto: "Cada um informa e edita a própria renda; os dois veem. Ela alimenta o Saldo previsto e o quanto da renda vai para moradia." },
-      { alvo: T("Moradia"), titulo: "Peso da moradia", texto: "Quanto da renda vai para aluguel, condomínio e contas de consumo. A marca de 30% é a referência comum para não apertar o orçamento." },
+      { alvo: T("Contas da casa"), titulo: "Tudo aqui os dois veem", texto: "Aluguel, condomínio, luz, mercado da casa… Cada conta mostra <b>quem paga</b> (a bolinha de cada um). Toque no círculo quando pagar." },
+      { alvo: S("#main .page-head .btn-primary"), titulo: "Nova conta da casa", texto: "Escolha se <b>repete todo mês</b> ou é só deste mês, o dia do vencimento e quem paga." },
+      { alvo: S("#main .bills .row-actions .icon-btn"), fallback: T("Contas da casa"), titulo: "Conta que muda de valor", texto: "No lápis, conta como a luz tem o campo <b>valor só deste mês</b>: muda o mês atual sem mexer nos outros. Só quem lançou pode torná-la pessoal." },
+      { alvo: T("Divisão da casa"), titulo: "Quem devolve quanto", texto: "Compara o que cada um pagou com a metade do total e diz quem faz o Pix. Fatura de cartão da casa entra pelo <b>mês das compras</b>. Depois do Pix, <b>Marcar feito</b>." },
+      { alvo: T("Renda do casal"), titulo: "Renda do casal", texto: "Cada um informa e edita a <b>própria</b> renda; os dois veem. Ela alimenta o Saldo previsto e o peso da moradia." },
+      { alvo: T("Moradia"), titulo: "Peso da moradia", texto: "Quanto da renda vai para aluguel, condomínio e contas de consumo. Alterne entre <b>Só meu salário</b> e <b>Salário do casal</b>; a marca de 30% é a referência comum." },
+      { alvo: T("Moradia nos últimos 12 meses"), titulo: "Histórico de 12 meses", texto: "Uma barra por mês com o total de moradia. Passe o dedo ou o mouse para ver o valor de cada mês." },
     ],
   },
   minhas: {
     nome: "Minhas contas",
     passos: [
       { alvo: T("Contas pessoais"), titulo: "Contas pessoais: só você vê", texto: "Academia, assinaturas, fatura do seu cartão… Não entram na divisão da casa, mas entram no seu Saldo previsto." },
-      { alvo: T("Dia a dia"), titulo: "Dia a dia: real × orçamento", texto: "Mostra quanto você já gastou nos bancos contra o orçamento. Abra <b>Fora do dia a dia</b> para ver o que foi tirado por já estar contado (contas lançadas, faturas, Pix para a outra pessoa)." },
-      { alvo: T("Gastos do mês nos bancos"), titulo: "Gastos dos bancos", texto: "Vem do Meu Pluggy, que busca os bancos <b>uma vez por dia</b>; Sincronizar traz o que ele já tem. Toque num grupo para ver as transações." },
+      { alvo: S("#main .bills .bill"), fallback: T("Contas pessoais"), titulo: "Pagar e editar", texto: "O <b>círculo</b> marca como paga; o <b>lápis</b> edita. Fatura de cartão mostra <b>Vence dd/mm</b> porque vence no mês seguinte." },
+      { alvo: T("Dia a dia"), titulo: "Dia a dia: real × orçamento", texto: "Quanto você já gastou nos bancos contra o seu orçamento. A barra fica laranja se passar; aí o Saldo previsto usa o gasto real." },
+      { alvo: S("#main .dd-fora"), fallback: T("Dia a dia"), titulo: "Fora do dia a dia", texto: "O que foi tirado do gasto real por já estar contado em outro lugar: contas que você lançou, compras de cartão com fatura nas contas e Pix para a outra pessoa da casa. Abra para conferir." },
+      { alvo: T("Gastos do mês nos bancos"), titulo: "Gastos dos bancos", texto: "Todas as saídas do mês por <b>Grupos</b> ou <b>Categorias</b>. Toque num grupo para ver as transações." },
+      { alvo: S("#main [data-act=sync]"), fallback: T("Gastos do mês nos bancos"), titulo: "Sincronizar", texto: "O Meu Pluggy busca os bancos <b>uma vez por dia</b>; Sincronizar traz para cá o que ele já tem. Compra de hoje pode só aparecer amanhã." },
       { alvo: S("#main .gx-extra"), fallback: T("Gastos do mês nos bancos"), titulo: "Prováveis assinaturas", texto: "Palpite do app: mesma cobrança em meses seguidos. Se é gasto fixo, <b>Virar conta</b>; se não é assinatura, pode ignorar." },
-      { alvo: T("Saldos nas contas"), titulo: "Saldos nas contas", texto: "Saldo atual de cada conta conectada, para consulta. Ele não entra no cálculo do Saldo previsto." },
+      { alvo: T("Saldos nas contas"), titulo: "Saldos nas contas", texto: "Saldo atual de cada conta conectada, só para consulta. Ele <b>não entra</b> no cálculo do Saldo previsto." },
     ],
   },
   cartoes: {
@@ -43,29 +53,36 @@ export const TOURS = {
     passos: [
       { alvo: S("#main .cc-grid .card"), fallback: S("#main .page-head"), titulo: "Da casa ou seus", texto: "Cartão <b>da casa</b>: os dois veem e a fatura entra na divisão. <b>Meus cartões</b>: só você vê." },
       { alvo: S("#main .cc-grid .card .kv"), fallback: S("#main .page-head"), titulo: "Fatura por competência", texto: "A fatura de um mês são as <b>compras daquele mês</b>, com vencimento no mês seguinte. Use <b>informar/editar</b> para ajustar o valor." },
-      { alvo: S("#main .cc-grid .card [data-act=edit-cartao]"), fallback: S("#main .page-head"), titulo: "Somar nas contas do mês", texto: "Em <b>Editar</b>, com essa opção marcada a fatura entra em Contas a pagar e no saldo, e as compras desse cartão saem do dia a dia — nada conta duas vezes." },
-      { alvo: S("#main .cc-grid .card .toggle"), fallback: S("#main .page-head"), titulo: "Fatura paga", texto: "Marque quando pagar. Ela some de Contas a pagar e, se for da casa, fica registrada para os dois." },
+      { alvo: S("#main .cc-grid .card [data-act=edit-cartao]"), fallback: S("#main .page-head"), titulo: "Somar nas contas do mês", texto: "Em <b>Editar</b>, com <b>Somar a fatura nas contas do mês</b> marcado, a fatura entra em Contas a pagar e no saldo, e as compras desse cartão saem do dia a dia — nada conta duas vezes." },
+      { alvo: S("#main .cc-grid .card .toggle"), fallback: S("#main .page-head"), titulo: "Fatura paga", texto: "Marque quando pagar. Ela fica como paga em Contas a pagar e, se for da casa, aparece assim para os dois." },
+      { alvo: S("#main .cc-grid .card .meter"), fallback: S("#main .cc-grid .card"), titulo: "Limite usado", texto: "Com o limite informado, a barra mostra quanto da fatura do mês já ocupa o limite e quanto sobra livre." },
+      { alvo: S("#main .cc-grid .card [data-act=edit-cartao]"), fallback: S("#main .page-head"), titulo: "Imagem do seu cartão", texto: "Em <b>Editar → Escolher imagem</b> você usa a foto da frente do seu cartão, como no Apple Pay. Dá para arrastar e dar zoom no recorte." },
       { alvo: T("Encontrados no Open Finance"), fallback: S("#main .page-head .btn-primary"), titulo: "Cartões do banco", texto: "Os cartões que chegaram pelo Meu Pluggy aparecem aqui. <b>Usar no app</b> cria o cartão já preenchido; ou cadastre à mão em <b>Novo cartão</b>." },
     ],
   },
   investimentos: {
     nome: "Investimentos",
     passos: [
-      { alvo: T("Minha carteira"), titulo: "Carteira: só você vê", texto: "Soma o que veio do banco (Open Finance) com o que você lançou à mão. A barra mostra o peso de cada classe." },
-      { alvo: S("#main .table-wrap"), fallback: T("Minha carteira"), titulo: "Coluna 12 meses", texto: "Vem do banco quando ele informa; senão é calculada pelo indexador (CDI, Selic, IPCA) ou desde a aplicação. Passe o mouse no número para ver de onde veio. Tudo antes do IR." },
-      { alvo: S("#main .page-head .btn-primary"), titulo: "Novo investimento", texto: "Lance o que não vem pelo banco (cripto, corretoras não conectadas). Só os lançados à mão podem ser editados aqui." },
-      { alvo: T("Metas do casal"), titulo: "Metas do casal", texto: "Os dois veem. <b>Registrar aporte</b> soma ao guardado, e o app diz quanto guardar por mês para chegar no prazo." },
+      { alvo: T("Minha carteira"), titulo: "Carteira: só você vê", texto: "Soma o que veio do banco (Open Finance) com o que você lançou à mão. A outra pessoa da casa não vê nada daqui." },
+      { alvo: S("#main .alloc-bar"), fallback: T("Minha carteira"), titulo: "Peso de cada classe", texto: "A barra e a legenda mostram quanto está em CDB, Tesouro, ações, FII… Passe o mouse ou o dedo para ver o valor." },
+      { alvo: S("#main .table-wrap"), fallback: T("Minha carteira"), titulo: "Coluna 12 meses", texto: "Vem do banco quando ele informa; senão é calculada pelo indexador (CDI, Selic, IPCA) ou desde a aplicação — o texto embaixo diz qual. Tudo antes do IR." },
+      { alvo: S("#main .page-head .btn-primary"), titulo: "Novo investimento", texto: "Lance o que não vem pelo banco (cripto, corretoras não conectadas). Só os lançados à mão podem ser editados aqui; os do banco atualizam sozinhos." },
+      { alvo: T("Metas do casal"), titulo: "Metas do casal", texto: "Os dois veem. Defina valor e prazo e o app diz <b>quanto guardar por mês</b>." },
+      { alvo: S("#main [data-act=aporte]"), fallback: T("Metas do casal"), titulo: "Registrar aporte", texto: "Cada vez que guardar dinheiro para a meta, registre o aporte: ele soma ao guardado e recalcula quanto falta." },
       { alvo: T("Cenário econômico"), titulo: "Cenário", texto: "Selic, IPCA, dólar e projeções do Focus, direto do Banco Central. É contexto para decidir, não recomendação de investimento." },
     ],
   },
   ajustes: {
     nome: "Ajustes",
     passos: [
-      { alvo: T("Pessoas da casa"), titulo: "Pessoas da casa", texto: "Aqui fica o <b>código de convite</b> para a outra pessoa entrar. Sair da casa pede confirmação e explica o que é apagado." },
+      { alvo: T("Pessoas da casa"), titulo: "Pessoas da casa", texto: "Aqui fica o <b>código de convite</b> para a outra pessoa entrar na casa." },
+      { alvo: S("#main [data-act=ask-sair-casa]"), fallback: T("Pessoas da casa"), titulo: "Sair da casa", texto: "Pede confirmação e explica antes o que é apagado. Investimentos, dia a dia e bancos conectados continuam com você." },
       { alvo: T("Quem vê o quê"), titulo: "Quem vê o quê", texto: "Casa, renda, metas e acerto: os dois. Pessoal, dia a dia, investimentos e bancos: só quem lançou — garantido pelo banco de dados, não só pela tela." },
       { alvo: T("Meus valores"), titulo: "Seus valores", texto: "Sua renda (os dois veem) e o orçamento do dia a dia (só você). Os dois alimentam o Saldo previsto." },
-      { alvo: T("Bancos (Meu Pluggy)"), titulo: "Bancos", texto: "<b>Conectar banco → MeuPluggy</b> com o seu login do meu.pluggy.ai. <b>Como conectar</b> abre o passo a passo. Usar Item ID fica em Avançado, só para suporte." },
-      { alvo: T("Tutoriais"), titulo: "Rever os tutoriais", texto: "Abra o passo a passo de qualquer aba quando quiser (no computador também pelo <b>?</b> no topo). Aqui você também liga ou desliga a abertura automática." },
+      { alvo: T("Bancos (Meu Pluggy)"), titulo: "Conectar bancos", texto: "<b>Conectar banco → MeuPluggy</b> e entre com o <b>seu</b> login do meu.pluggy.ai. <b>Como conectar</b> abre o passo a passo com telas." },
+      { alvo: T("Bancos (Meu Pluggy)"), titulo: "Sincronizar e Avançado", texto: "<b>Sincronizar agora</b> traz o que o Meu Pluggy já buscou (ele atualiza os bancos 1× por dia). <b>Avançado → Usar Item ID</b> é só para suporte." },
+      { alvo: T("Tutoriais"), titulo: "Rever os tutoriais", texto: "Abra o passo a passo de qualquer aba quando quiser (no computador também pelo <b>?</b> no topo). Aqui você liga ou desliga a abertura automática." },
+      { alvo: T("Aparência"), titulo: "Aparência", texto: "Automático segue o claro/escuro do celular ou do computador; ou fixe Claro ou Escuro. Vale só neste aparelho." },
     ],
   },
 };
@@ -91,11 +108,14 @@ export function salvarTour(user, patch, onSalvar) {
   onSalvar?.(novo);
   return novo;
 }
+// Sobe quando os passos mudam bastante: quem já tinha concluído vê a versão nova uma vez.
+const VERSAO = 2;
+const chaveVisto = (rota) => `${rota}@${VERSAO}`;
 const adiados = new Set(); // "Ver mais tarde" nesta abertura do app
 export function deveMostrar(user, rota) {
   if (!TOURS[rota] || adiados.has(rota)) return false;
   const e = estadoTour(user);
-  return !e.off && !e.vistos.has(rota);
+  return !e.off && !e.vistos.has(chaveVisto(rota));
 }
 
 /* ---------- alvo ---------- */
@@ -202,7 +222,7 @@ export function abrirTour(rota, { user, onSalvar } = {}) {
     else if (t === "ir") ir(Number(b.dataset.i));
     else if (t === "prox") {
       if (i < n - 1) return ir(i + 1);
-      salvar({ vistos: [rota] });
+      salvar({ vistos: [chaveVisto(rota)] });
       fecharTour();
     }
   });
