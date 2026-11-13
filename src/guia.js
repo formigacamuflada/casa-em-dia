@@ -74,13 +74,13 @@ const PASSOS = [
   {
     tela: "buscar",
     titulo: "Procure por MeuPluggy",
-    texto: "Na lista de instituições, escolha <b>MeuPluggy</b>, não o seu banco. Ele traz de uma vez tudo o que você conectou no passo 2.",
+    texto: "Na lista de instituições, escolha <b>MeuPluggy</b>, não o seu banco. Cada vez que você conecta, vem <b>um banco</b> do seu Meu Pluggy.",
   },
   {
     tela: "login",
     titulo: "Entre com o login do Meu Pluggy",
-    texto: "Use o mesmo e-mail e senha do meu.pluggy.ai. Pronto: contas, cartões e investimentos aparecem aqui, só para você.",
-    dica: "O app só lê os dados. Nunca movimenta dinheiro.",
+    texto: "Use o mesmo e-mail e senha do meu.pluggy.ai e autorize o banco. As contas, os cartões e os investimentos dele aparecem aqui, só para você.",
+    dica: "Tem mais de um banco? Repita os passos 3 a 5 para cada um. O app só lê os dados, nunca movimenta dinheiro.",
   },
 ];
 

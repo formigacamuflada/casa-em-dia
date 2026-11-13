@@ -1537,11 +1537,11 @@ function pMinhas() {
 function blocoEncontrados(importados, vinculados) {
   const linhas = [...importados, ...vinculados];
   if (!linhas.length) {
-    return `<section class="card">${cardHead("", "Encontrados no Open Finance", "Cartões que o Meu Pluggy trouxer aparecem aqui", "pessoal")}<p class="faint" style="font-size:13px">Nenhum cartão de crédito veio na última sincronização. Se você tem cartão em algum banco conectado, confira em Ajustes → Bancos se a conexão está ativa e toque em Sincronizar.</p></section>`;
+    return `<section class="card">${cardHead("", "Encontrados no Open Finance", "Cartões que o Meu Pluggy trouxer aparecem aqui", "pessoal")}<p class="faint" style="font-size:13px">Nenhum cartão de crédito veio na última sincronização. Cada conexão do Meu Pluggy traz um banco: conecte cada banco em Ajustes → Bancos → Conectar banco.</p></section>`;
   }
   const sub = importados.length
     ? `${importados.length} ${importados.length === 1 ? "cartão ainda não está" : "cartões ainda não estão"} no app. Escolha como pessoal ou da casa.`
-    : "Todos os cartões encontrados já estão no app.";
+    : "Todos os cartões encontrados já estão no app. Faltou algum? Cada conexão do Meu Pluggy traz um banco: conecte os outros em Ajustes → Bancos.";
   const acao = (c) => c.noApp
     ? `<span class="pill pos">${ic("ok", "sm")}No app${c.noApp.escopo === "casa" ? " · da casa" : " · pessoal"}</span>`
     : `<button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button>`;
@@ -1703,6 +1703,7 @@ function pAjustes() {
       <dt>Dia a dia (só você vê)</dt><dd>${brl(D().prefs?.dia_a_dia || 0)} <button class="link-btn" data-act="diadia">editar</button></dd></dl></section>
     <section class="card s6 t12">${cardHead("envelope", "Bancos (Meu Pluggy)", "Somente leitura, só você vê", "pessoal")}
       ${D().itens.length ? `<dl class="kv">${D().itens.map((i) => `<dt>${esc(i.apelido || "Conexão")}<div class="faint num" style="font-size:12px">${esc(i.item_id)}</div></dt><dd><button class="btn btn-danger btn-sm" data-act="rm-item" data-id="${esc(i.item_id)}">Remover</button></dd>`).join("")}</dl>` : `<p class="muted" style="font-size:14px">Toque em Conectar banco, escolha o banco e autorize pelo app dele. O app só lê os dados, nunca movimenta dinheiro.</p>`}
+      ${D().itens.length ? `<p class="faint" style="font-size:13px">Cada conexão traz <b>um banco</b> do seu Meu Pluggy. Tem mais bancos lá? Toque em <b>Conectar banco</b> → MeuPluggy de novo e autorize o próximo, um de cada vez.</p>` : ""}
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary btn-sm" data-act="conectar-banco">${ic("mais", "sm")}Conectar banco</button><button class="btn btn-ghost btn-sm" data-act="guia-pluggy">${ic("livro", "sm")}Como conectar</button>${D().itens.length ? `<button class="btn btn-sm" data-act="sync" ${S.syncing ? "disabled" : ""}>${ic("atualizar", "sm")}${S.syncing ? "Sincronizando…" : "Sincronizar agora"}</button>` : ""}</div>
       <details class="avancado" data-avancado ${S.avancadoBancos ? "open" : ""}><summary>${ic("dir", "sm")}Avançado</summary>
         <p class="faint">Só para suporte: ligar uma conexão que já existe na Pluggy colando o Item ID dela. Conexões feitas assim não atualizam sozinhas; o normal é usar <strong>Conectar banco</strong>.</p>
