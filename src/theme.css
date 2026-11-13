@@ -2889,3 +2889,117 @@ details.avancado > p {
   color: var(--text-2);
   white-space: nowrap;
 }
+
+/* Cartões encontrados no Open Finance (popup) */
+dialog.novos-cc {
+  width: min(640px, calc(100vw - 24px));
+}
+.ncc-corpo {
+  padding: 0 22px 14px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ncc-intro {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.ncc-intro b {
+  color: var(--text);
+}
+.ncc-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ncc-item {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--surface-2);
+  transition: opacity 0.2s;
+}
+.ncc-item.off .ncc-top,
+.ncc-item.off .ncc-banco {
+  opacity: 0.45;
+}
+.ncc-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.ncc-ic {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--accent-soft, rgba(0, 200, 5, 0.12));
+  color: var(--accent);
+}
+.ncc-nome {
+  min-width: 0;
+  font-size: 14.5px;
+}
+.ncc-nome small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: var(--text-3);
+}
+.ncc-ctl {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.ncc-banco {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 140px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+.ncc-banco .inp {
+  height: 36px;
+  padding: 0 10px;
+  font-size: 14px;
+}
+.ncc-seg {
+  flex: 2 1 260px;
+}
+.ncc-seg button {
+  white-space: nowrap;
+}
+.ncc-somar {
+  align-items: flex-start;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.ncc-somar small {
+  font-size: 12.5px;
+}
+.ncc-conta {
+  font-size: 12.5px;
+}
+@media (max-width: 560px) {
+  dialog.novos-cc {
+    width: 100vw;
+    max-width: 100vw;
+    margin: auto 0 0;
+    border-radius: 22px 22px 0 0;
+  }
+  .ncc-corpo {
+    padding: 0 16px 12px;
+  }
+  .ncc-conta {
+    display: none;
+  }
+}

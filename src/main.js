@@ -1044,8 +1044,10 @@ function faceCartao(c, { mini = false, status = "" } = {}) {
 function todosCartoes() {
   const proprios = D().cartoes.map((c) => ({ ...c, origemTipo: "manual" }));
   const usados = new Set(D().cartoes.map((c) => c.origem?.accountId).filter(Boolean));
+  // Cartão lançado à mão com os mesmos 4 últimos números também conta como já no app.
+  const finais = new Set(D().cartoes.filter((c) => !c.origem?.accountId && c.final).map((c) => c.final));
   const importados = (D().importacao?.cartoes || [])
-    .filter((c) => !usados.has(c.id))
+    .filter((c) => !usados.has(c.id) && !(c.final && finais.has(c.final)))
     .map((c) => ({ importado: true, ...c }));
   return { proprios, importados };
 }
@@ -1545,7 +1547,7 @@ function pCartoes() {
     ${casa.length ? `<div class="cc-grid">${casa.map(bloco).join("")}</div>` : `<div class="card">${vazio("cartoes", "Nenhum cartão da casa", "Um cartão usado para as despesas dos dois aparece aqui para ambos, com a fatura entrando no acerto.", `<button class="btn btn-primary btn-sm" data-act="novo-cartao" data-escopo="casa">Novo cartão da casa</button>`)}</div>`}
     <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><h2 style="font-size:17px;font-weight:600">Meus cartões</h2>${badge("pessoal")}</div>
     ${meus.length ? `<div class="cc-grid">${meus.map(bloco).join("")}</div>` : `<div class="card">${vazio("", "Nenhum cartão pessoal", "Seus cartões ficam visíveis só para você.", `<button class="btn btn-sm" data-act="novo-cartao" data-escopo="pessoal">Novo cartão pessoal</button>`)}</div>`}
-    ${importados.length ? `<section class="card">${cardHead("", "Encontrados no Open Finance", "Toque em Usar no app para acompanhar a fatura aqui", "pessoal")}<div class="table-wrap"><table class="t"><thead><tr><th>Cartão</th><th class="r">Fatura atual</th><th class="r">Limite livre</th><th>Vencimento</th><th></th></tr></thead><tbody>${importados.map((c) => `<tr><td>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</td><td class="r">${brl(c.fatura)}</td><td class="r">${c.disponivel != null ? brl(c.disponivel) : "—"}</td><td>${dataBR(c.vencimento)}</td><td class="r"><button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button></td></tr>`).join("")}</tbody></table></div></section>` : ""}`;
+    ${importados.length ? `<section class="card">${cardHead("", "Encontrados no Open Finance", "Escolha quais acompanhar no app, como pessoal ou da casa", "pessoal", `<button class="btn btn-primary btn-sm" data-act="novos-cartoes">${ic("cartao", "sm")}Escolher cartões</button>`)}<div class="table-wrap"><table class="t"><thead><tr><th>Cartão</th><th class="r">Fatura atual</th><th class="r">Limite livre</th><th>Vencimento</th><th></th></tr></thead><tbody>${importados.map((c) => `<tr><td>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</td><td class="r">${brl(c.fatura)}</td><td class="r">${c.disponivel != null ? brl(c.disponivel) : "—"}</td><td>${dataBR(c.vencimento)}</td><td class="r"><button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button></td></tr>`).join("")}</tbody></table></div></section>` : ""}`;
 }
 
 // Rentabilidade em 12 meses: número do banco, estimativa pelo indexador ou resultado desde a aplicação.
@@ -2181,6 +2183,124 @@ function formItem() {
 }
 
 /* ------------------------------------------------------------------ Pluggy Connect */
+/* ---- Cartões encontrados no Open Finance: escolher quais entram no app ----
+   Abre depois de conectar/sincronizar quando há cartão da Pluggy que ainda não está no
+   app e que a pessoa não dispensou. "Não adicionar" fica lembrado (conta + aparelho). */
+const CC_IGN_KEY = () => `casa-cartoes-ignorados:${meId() || "anon"}`;
+function cartoesIgnorados() {
+  const m = S.session?.user?.user_metadata?.cartoes_ignorados || [];
+  let l = [];
+  try { l = JSON.parse(localStorage.getItem(CC_IGN_KEY()) || "[]"); } catch { /* sem armazenamento */ }
+  return new Set([...m, ...l]);
+}
+async function salvarIgnorados(set) {
+  const lista = [...set];
+  try { localStorage.setItem(CC_IGN_KEY(), JSON.stringify(lista)); } catch { /* sem armazenamento */ }
+  try { await api.auth.salvarMeta({ cartoes_ignorados: lista }); } catch (e) { console.error(e); }
+}
+// Palpite do banco pelo nome do cartão (no Meu Pluggy a conexão se chama "MeuPluggy").
+const BANCO_PELO_NOME = [
+  [/santander/i, "Santander"], [/ourocard|banco do brasil|\bbb\b/i, "Banco do Brasil"], [/nu ?bank|ultravioleta|\bnu\b/i, "Nubank"],
+  [/\binter\b/i, "Inter"], [/ita[uú]|personnalit/i, "Itaú"], [/bradesco/i, "Bradesco"], [/\bc6\b|carbon/i, "C6 Bank"],
+  [/caixa/i, "Caixa"], [/\bxp\b/i, "XP"], [/btg/i, "BTG"], [/picpay/i, "PicPay"], [/mercado ?pago/i, "Mercado Pago"], [/porto/i, "Porto"],
+];
+function bancoDoImportado(c) {
+  if (c.conexao && !/meu ?pluggy/i.test(c.conexao)) return c.conexao;
+  return (BANCO_PELO_NOME.find(([r]) => r.test(c.nome || "")) || [])[1] || "";
+}
+const cartoesPendentes = () => {
+  const ign = cartoesIgnorados();
+  return todosCartoes().importados.filter((c) => !ign.has(c.id));
+};
+const diaDe = (iso) => (iso ? Number(String(iso).slice(8, 10)) || null : null);
+
+function abrirNovosCartoes({ todos = false } = {}) {
+  const ign = cartoesIgnorados();
+  const lista = todos ? todosCartoes().importados : cartoesPendentes();
+  if (!lista.length) return toast("Todos os cartões do Open Finance já estão no app.");
+  let d = document.getElementById("novosCC");
+  if (!d) {
+    d = document.createElement("dialog");
+    d.id = "novosCC";
+    d.className = "guia novos-cc";
+    d.setAttribute("aria-labelledby", "novosCCt");
+    document.body.append(d);
+  }
+  const escolha = new Map(lista.map((c) => [c.id, ign.has(c.id) ? "nao" : "pessoal"]));
+  const linha = (c) => `<div class="ncc-item" data-id="${esc(c.id)}">
+      <div class="ncc-top"><span class="ncc-ic">${ic("cartao", "sm")}</span><div class="ncc-nome"><b>${esc(c.nome)}</b>${c.final ? ` <span class="faint">•••• ${esc(c.final)}</span>` : ""}${c.bandeira ? ` <span class="faint">· ${esc(c.bandeira)}</span>` : ""}
+        <small>${c.fatura != null ? `Fatura atual ${brl(c.fatura)}` : "Sem fatura"}${c.vencimento ? ` · vence ${dataBR(c.vencimento)}` : ""}${c.limite != null ? ` · limite ${brl(c.limite)}` : ""}</small></div></div>
+      <div class="ncc-ctl"><label class="ncc-banco"><span>Banco</span><input class="inp" name="banco" value="${esc(bancoDoImportado(c))}" placeholder="Ex.: Inter" maxlength="40"></label>
+        <div class="seg-ctl ncc-seg" role="group" aria-label="Como adicionar ${esc(c.nome)}">${[["pessoal", "Pessoal"], ["casa", "Da casa"], ["nao", "Não adicionar"]].map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${escolha.get(c.id) === v}">${l}</button>`).join("")}</div></div>
+    </div>`;
+  d.innerHTML = `<div class="guia-in">
+    <div class="guia-head"><div><p class="guia-kicker">Cartões encontrados no Open Finance</p><h2 id="novosCCt">Quer acompanhar estes cartões no app?</h2></div>
+      <button type="button" class="icon-btn" data-n="tarde" aria-label="Fechar (ver mais tarde)">${ic("x")}</button></div>
+    <div class="ncc-corpo">
+      <p class="ncc-intro"><b>Pessoal</b>: só você vê. <b>Da casa</b>: os dois veem e a fatura entra na divisão. A fatura é a das compras do mês e vence no mês seguinte.</p>
+      <div class="ncc-lista">${lista.map(linha).join("")}</div>
+      <label class="toggle ncc-somar"><span class="check"><input type="checkbox" id="nccSomar" checked><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5 9.5 17 19 7.5" style="stroke-width:2.5"/></svg></span><span>Somar a fatura nas contas do mês <small class="faint">— recomendado: as compras desses cartões saem do dia a dia e entram pela fatura, sem contar duas vezes</small></span></label>
+    </div>
+    <div class="guia-foot"><span class="faint ncc-conta"></span><div class="guia-btns"><button type="button" class="btn btn-ghost btn-sm" data-n="tarde">Ver mais tarde</button><button type="button" class="btn btn-primary btn-sm" data-n="ok"></button></div></div>
+  </div>`;
+  const atualizar = () => {
+    const n = [...escolha.values()].filter((v) => v !== "nao").length;
+    d.querySelector("[data-n=ok]").textContent = n ? `Adicionar ${n} ${n === 1 ? "cartão" : "cartões"}` : "Salvar escolha";
+    d.querySelector(".ncc-conta").textContent = `${n} de ${lista.length} para adicionar`;
+    d.querySelectorAll(".ncc-item").forEach((el) => el.classList.toggle("off", escolha.get(el.dataset.id) === "nao"));
+  };
+  d.onclick = async (ev) => {
+    if (ev.target === d) return d.close();
+    const seg = ev.target.closest(".ncc-seg button");
+    if (seg) {
+      const id = seg.closest(".ncc-item").dataset.id;
+      escolha.set(id, seg.dataset.v);
+      seg.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === seg)));
+      return atualizar();
+    }
+    const b = ev.target.closest("[data-n]");
+    if (!b) return;
+    if (b.dataset.n === "tarde") return d.close();
+    // Salvar: adiciona os escolhidos e lembra os dispensados.
+    const somar = d.querySelector("#nccSomar").checked;
+    const ym = curYM();
+    const novosIgn = cartoesIgnorados();
+    const add = [];
+    for (const c of lista) {
+      const v = escolha.get(c.id);
+      if (v === "nao") { novosIgn.add(c.id); continue; }
+      novosIgn.delete(c.id);
+      const banco = d.querySelector(`.ncc-item[data-id="${CSS.escape(c.id)}"] input[name=banco]`).value.trim() || c.nome;
+      add.push({
+        banco, apelido: c.nome, escopo: v, final: c.final || null, bandeira: c.bandeira || null,
+        cor: corDoBanco(banco) || corDoBanco(c.nome) || "grafite",
+        vencimento: diaDe(c.vencimento) || 10, fechamento: diaDe(c.fechamento), limite: c.limite ?? null,
+        somar_nas_contas: somar, pagador: v === "casa" ? minhaVaga() || "a" : null,
+        faturas: c.fatura != null && c.fatura > 0 ? { [ym]: c.fatura } : {},
+        origem: { tipo: "pluggy", accountId: c.id },
+      });
+    }
+    b.disabled = true;
+    try {
+      for (const row of add) await api.salvar("cartoes", row);
+      await salvarIgnorados(novosIgn);
+      d.close();
+      toast(add.length ? `${add.length} ${add.length === 1 ? "cartão adicionado" : "cartões adicionados"}. Confira em Cartões.` : "Escolha salva. Os cartões continuam em Cartões → Encontrados no Open Finance.");
+      await reload();
+    } catch (err) {
+      b.disabled = false;
+      toast(erroMsg(err), true);
+    }
+  };
+  atualizar();
+  if (!d.open) d.showModal();
+}
+// Depois de conectar ou sincronizar: oferece os cartões novos (uma vez por sincronização).
+function oferecerNovosCartoes() {
+  if (!cartoesPendentes().length || document.querySelector("dialog[open]") || tourAberto()) return;
+  abrirNovosCartoes();
+}
+
 async function sincronizarAgora() {
   S.syncing = true;
   render();
@@ -2194,6 +2314,7 @@ async function sincronizarAgora() {
   }
   S.syncing = false;
   await reload();
+  oferecerNovosCartoes();
 }
 async function conectarBanco() {
   try {
@@ -2296,6 +2417,7 @@ document.addEventListener("click", async (e) => {
       return;
     case "novo-codigo": return act(() => api.novoCodigo(), "Código novo gerado. O antigo deixou de valer.");
     case "sync": return sincronizarAgora();
+    case "novos-cartoes": return abrirNovosCartoes({ todos: true });
     case "usar-cartao": {
       const c = (D().importacao?.cartoes || []).find((x) => x.id === id);
       if (!c) return;
