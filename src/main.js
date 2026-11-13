@@ -1051,10 +1051,15 @@ function todosCartoes() {
   const usados = new Set(D().cartoes.map((c) => c.origem?.accountId).filter(Boolean));
   // Cartão lançado à mão com os mesmos 4 últimos números também conta como já no app.
   const finais = new Set(D().cartoes.filter((c) => !c.origem?.accountId && c.final).map((c) => c.final));
-  const importados = (D().importacao?.cartoes || [])
-    .filter((c) => !usados.has(c.id) && !(c.final && finais.has(c.final)))
-    .map((c) => ({ importado: true, ...c }));
-  return { proprios, importados };
+  const todos = D().importacao?.cartoes || [];
+  const jaNoApp = (c) => usados.has(c.id) || Boolean(c.final && finais.has(c.final));
+  const importados = todos.filter((c) => !jaNoApp(c)).map((c) => ({ importado: true, ...c }));
+  // Os que já estão no app continuam listados em "Encontrados", marcados como já no app.
+  const vinculados = todos.filter(jaNoApp).map((c) => {
+    const app = D().cartoes.find((x) => x.origem?.accountId === c.id) || D().cartoes.find((x) => !x.origem?.accountId && x.final && x.final === c.final);
+    return { importado: true, ...c, noApp: app };
+  });
+  return { proprios, importados, vinculados };
 }
 
 function blocoCartoesResumo(span = "w1") {
@@ -1529,8 +1534,22 @@ function pMinhas() {
   </div>`;
 }
 
+function blocoEncontrados(importados, vinculados) {
+  const linhas = [...importados, ...vinculados];
+  if (!linhas.length) {
+    return `<section class="card">${cardHead("", "Encontrados no Open Finance", "Cartões que o Meu Pluggy trouxer aparecem aqui", "pessoal")}<p class="faint" style="font-size:13px">Nenhum cartão de crédito veio na última sincronização. Se você tem cartão em algum banco conectado, confira em Ajustes → Bancos se a conexão está ativa e toque em Sincronizar.</p></section>`;
+  }
+  const sub = importados.length
+    ? `${importados.length} ${importados.length === 1 ? "cartão ainda não está" : "cartões ainda não estão"} no app. Escolha como pessoal ou da casa.`
+    : "Todos os cartões encontrados já estão no app.";
+  const acao = (c) => c.noApp
+    ? `<span class="pill pos">${ic("ok", "sm")}No app${c.noApp.escopo === "casa" ? " · da casa" : " · pessoal"}</span>`
+    : `<button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button>`;
+  return `<section class="card">${cardHead("", "Encontrados no Open Finance", sub, "pessoal", `<button class="btn ${importados.length ? "btn-primary" : ""} btn-sm" data-act="novos-cartoes">${ic("cartao", "sm")}Escolher cartões</button>`)}<div class="table-wrap"><table class="t"><thead><tr><th>Cartão</th><th class="r">Fatura atual</th><th class="r">Limite livre</th><th>Vencimento</th><th></th></tr></thead><tbody>${linhas.map((c) => `<tr><td>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</td><td class="r">${brl(c.fatura)}</td><td class="r">${c.disponivel != null ? brl(c.disponivel) : "—"}</td><td>${dataBR(c.vencimento)}</td><td class="r">${acao(c)}</td></tr>`).join("")}</tbody></table></div></section>`;
+}
+
 function pCartoes() {
-  const { proprios, importados } = todosCartoes();
+  const { proprios, importados, vinculados } = todosCartoes();
   const bloco = (c) => {
     const f = c.faturas?.[S.month];
     const usado = c.limite && f != null ? Math.min(100, (Number(f) / c.limite) * 100) : null;
@@ -1552,7 +1571,7 @@ function pCartoes() {
     ${casa.length ? `<div class="cc-grid">${casa.map(bloco).join("")}</div>` : `<div class="card">${vazio("cartoes", "Nenhum cartão da casa", "Um cartão usado para as despesas dos dois aparece aqui para ambos, com a fatura entrando no acerto.", `<button class="btn btn-primary btn-sm" data-act="novo-cartao" data-escopo="casa">Novo cartão da casa</button>`)}</div>`}
     <div style="display:flex;align-items:center;gap:10px;margin-top:8px"><h2 style="font-size:17px;font-weight:600">Meus cartões</h2>${badge("pessoal")}</div>
     ${meus.length ? `<div class="cc-grid">${meus.map(bloco).join("")}</div>` : `<div class="card">${vazio("", "Nenhum cartão pessoal", "Seus cartões ficam visíveis só para você.", `<button class="btn btn-sm" data-act="novo-cartao" data-escopo="pessoal">Novo cartão pessoal</button>`)}</div>`}
-    ${importados.length ? `<section class="card">${cardHead("", "Encontrados no Open Finance", "Escolha quais acompanhar no app, como pessoal ou da casa", "pessoal", `<button class="btn btn-primary btn-sm" data-act="novos-cartoes">${ic("cartao", "sm")}Escolher cartões</button>`)}<div class="table-wrap"><table class="t"><thead><tr><th>Cartão</th><th class="r">Fatura atual</th><th class="r">Limite livre</th><th>Vencimento</th><th></th></tr></thead><tbody>${importados.map((c) => `<tr><td>${esc(c.nome)}${c.final ? ` ··${esc(c.final)}` : ""}</td><td class="r">${brl(c.fatura)}</td><td class="r">${c.disponivel != null ? brl(c.disponivel) : "—"}</td><td>${dataBR(c.vencimento)}</td><td class="r"><button class="btn btn-sm" data-act="usar-cartao" data-id="${esc(c.id)}">Usar no app</button></td></tr>`).join("")}</tbody></table></div></section>` : ""}`;
+    ${blocoEncontrados(importados, vinculados)}`;
 }
 
 // Rentabilidade em 12 meses: número do banco, estimativa pelo indexador ou resultado desde a aplicação.
