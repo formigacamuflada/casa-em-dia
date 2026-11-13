@@ -1,4 +1,4 @@
-// Regras de cálculo do mês: contas que valem no mês, acerto 50/50 e sobra.
+// Regras de cálculo do mês: contas que valem no mês, acerto (divisão da casa) e sobra.
 
 export const CATEGORIAS = [
   ["moradia", "Moradia (aluguel, condomínio, IPTU)"],
@@ -111,13 +111,41 @@ export function contasDoMes(state, ym, escopo) {
   return out.sort((a, b) => ordemDia(a, ym) - ordemDia(b, ym) || a.nome.localeCompare(b.nome, "pt-BR"));
 }
 
+// Como a casa divide as contas: "igual" (50/50), "renda" (proporcional à renda de cada um)
+// ou "a:<n>" (personalizada: a vaga a paga n%). O antigo padrão "50/50" vale como igual.
+export function lerDivisao(valor) {
+  const v = String(valor || "igual");
+  if (v === "renda") return { modo: "renda" };
+  const m = v.match(/^a:(\d+(?:\.\d+)?)$/);
+  if (m) return { modo: "pers", pctA: Math.min(100, Math.max(0, Number(m[1]))) };
+  return { modo: "igual" };
+}
+
+export function fracaoDe(state, d = lerDivisao(state.casa?.divisao)) {
+  if (d.modo === "pers") return { ...d, a: d.pctA / 100, semRenda: false };
+  if (d.modo === "renda") {
+    const r = (v) => Number(state.membros.find((m) => m.vaga === v)?.renda) || 0;
+    const ra = r("a");
+    const rb = r("b");
+    if (ra > 0 && rb > 0) return { ...d, a: ra / (ra + rb), semRenda: false };
+    return { ...d, a: 0.5, semRenda: true };
+  }
+  return { ...d, a: 0.5, semRenda: false };
+}
+
+export function divisaoCasa(state) {
+  return fracaoDe(state);
+}
+
 export function acerto(state, ym) {
   const itens = contasDoMes(state, ym, "casa");
   const total = sum(itens.map((i) => i.valorMes));
   const pagou = { a: 0, b: 0 };
   for (const i of itens) pagou[i.pagador === "b" ? "b" : "a"] += i.valorMes;
-  const metade = round2(total / 2);
-  const diff = round2(pagou.a - total / 2);
+  const div = divisaoCasa(state);
+  const parte = { a: round2(total * div.a), b: round2(total - round2(total * div.a)) };
+  const metade = parte.a;
+  const diff = round2(pagou.a - total * div.a);
   let de = null;
   let para = null;
   let valor = 0;
@@ -130,7 +158,7 @@ export function acerto(state, ym) {
     para = "b";
     valor = -diff;
   }
-  return { itens, total, metade, pagou: { a: round2(pagou.a), b: round2(pagou.b) }, de, para, valor: round2(valor) };
+  return { itens, total, metade, parte, div, pagou: { a: round2(pagou.a), b: round2(pagou.b) }, de, para, valor: round2(valor) };
 }
 
 /* ---- gasto real do dia a dia (bancos via Meu Pluggy) ----
@@ -226,7 +254,7 @@ export function gastoReal(state, ym, vaga) {
 export function sobra(state, ym, vaga) {
   const membro = state.membros.find((m) => m.vaga === vaga);
   const renda = membro && membro.renda != null ? Number(membro.renda) : null;
-  const casa = acerto(state, ym).metade;
+  const casa = acerto(state, ym).parte[vaga === "b" ? "b" : "a"];
   const pessoais = sum(contasDoMes(state, ym, "pessoal").map((i) => i.valorMes));
   const diaOrc = Number(state.prefs?.dia_a_dia || 0);
   const real = gastoReal(state, ym, vaga);

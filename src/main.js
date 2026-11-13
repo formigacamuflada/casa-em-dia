@@ -9,7 +9,7 @@ import { createApi } from "./api.js";
 import { ic } from "./icons.js";
 import {
   CATEGORIAS, CAT_CURTA, acerto, addYM, contasDoMes, curYM, daysIn, historicoMoradia,
-  bate, diasAteVencer, gastoReal, metaResumo, ordemDia, venceNoMesSeguinte, moradia, parseMoney, round2, sobra, statusConta, sum,
+  bate, diasAteVencer, divisaoCasa, fracaoDe, lerDivisao, gastoReal, metaResumo, ordemDia, venceNoMesSeguinte, moradia, parseMoney, round2, sobra, statusConta, sum,
 } from "./calc.js";
 
 const api = window.__CASA_API__ || createApi();
@@ -838,11 +838,11 @@ function blocoSobra(span = "w2") {
   const s = sobra(D(), S.month, v);
   if (s.renda === null) {
     return `<section class="card ${span} c-saldo">${cardTop("Saldo previsto", { icone: "carteira", escopo: "pessoal" })}
-      ${vazio("", "Informe sua renda", "Com a renda, o app mostra quanto sobra depois da sua metade da casa, das suas contas pessoais e do dia a dia.", `<button class="btn btn-primary btn-sm" data-act="renda" data-vaga="${v}">Informar renda</button>`)}</section>`;
+      ${vazio("", "Informe sua renda", "Com a renda, o app mostra quanto sobra depois da sua parte da casa, das suas contas pessoais e do dia a dia.", `<button class="btn btn-primary btn-sm" data-act="renda" data-vaga="${v}">Informar renda</button>`)}</section>`;
   }
   const base = Math.max(s.renda, 1);
   const partes = [
-    ["casa", "Sua metade da casa", s.casa],
+    ["casa", "Sua parte da casa", s.casa],
     ["pess", "Contas pessoais", s.pessoais],
     ["dia", "Dia a dia", s.diaDia],
   ];
@@ -863,7 +863,7 @@ function blocoSobra(span = "w2") {
         <span class="faint">valor estimado após pagar todas as contas</span>
       </div>
     </div>
-    <div class="sb-bar" role="img" aria-label="Divisão da renda: metade da casa ${brl(s.casa)}, contas pessoais ${brl(s.pessoais)}, dia a dia ${brl(s.diaDia)}, sobra ${brl(Math.max(0, s.resto))}">${segs}</div>
+    <div class="sb-bar" role="img" aria-label="Divisão da renda: parte da casa ${brl(s.casa)}, contas pessoais ${brl(s.pessoais)}, dia a dia ${brl(s.diaDia)}, sobra ${brl(Math.max(0, s.resto))}">${segs}</div>
     <div class="sb-legend">
       <div class="sbl"><span class="lg-l">Salário</span><span class="lg-v">${brl(s.renda)} <button class="icon-btn xs" data-act="renda" data-vaga="${v}" aria-label="Editar renda">${ic("lapis", "sm")}</button></span></div>
       ${partes.map(([k, l, val]) => `<div class="sbl"><span class="lg-l"><i class="dot ${k}"></i>${l}${k === "dia" ? ` <button class="link-btn" data-act="diadia">ajustar</button>` : ""}</span><span class="lg-v">− ${brl(val)} <small>· ${pct(pctDe(val), 0)}</small></span>${k === "dia" && s.diaReal != null ? `<span class="sbl-sub" data-tip="${esc(dicaDia(s))}">${s.diaReal > s.diaOrc ? `acima do orçamento de ${brl(s.diaOrc)}` : `gasto real: ${brl(s.diaReal)}`}</span>` : ""}</div>`).join("")}
@@ -972,16 +972,16 @@ function blocoAcerto(span = "w1") {
   const quem = a.itens.slice().sort((x, y) => y.valorMes - x.valorMes);
   const msg = a.de
     ? `${a.de === minhaVaga() ? "Você devolve" : `${esc(nome(a.de))} te devolve`} <strong class="num">${brl(a.valor)}</strong> no Pix`
-    : "Cada um pagou a sua metade. Sem acerto neste mês.";
+    : "Cada um pagou a sua parte. Sem acerto neste mês.";
   return `<section class="card ${span} c-div">
     ${cardTop("Divisão da casa", { icone: "balanca", escopo: "casa" })}
-    <div><p class="lbl-sm">Total das contas</p>${money(a.total, "big lg")}</div>
+    <div><p class="lbl-sm">Total das contas</p>${money(a.total, "big lg")}<p class="div-linha">${textoDivisao(a.div)} · <button class="link-btn" data-act="divisao">ajustar</button></p></div>
     <div class="split">
       <div class="split-top"><span><i class="dot a"></i>${esc(nome("a"))} ${"a" === minhaVaga() ? "paga" : "paga"}<b class="num">${brl(a.pagou.a)}</b></span><span class="r">${esc(nome("b"))} paga<i class="dot b"></i><b class="num">${brl(a.pagou.b)}</b></span></div>
       <div class="split-bar" role="img" aria-label="${esc(nome("a", { voce: false }))} paga ${brl(a.pagou.a)}, ${esc(nome("b", { voce: false }))} paga ${brl(a.pagou.b)}">
         ${a.pagou.a > 0 ? `<div class="seg a" style="width:${pa}%" data-tip="${esc(nome("a"))}: ${brl(a.pagou.a)}">${lbl(pa)}</div>` : ""}
         ${a.pagou.b > 0 ? `<div class="seg b" style="width:${100 - pa}%" data-tip="${esc(nome("b"))}: ${brl(a.pagou.b)}">${lbl(100 - pa)}</div>` : ""}
-        <div class="mid" title="Metade: ${brl(a.metade)}"></div>
+        <div class="mid" style="left:${(a.div.a * 100).toFixed(1)}%" title="Parte de ${esc(nome("a", { voce: false }))}: ${brl(a.parte.a)} · ${esc(nome("b", { voce: false }))}: ${brl(a.parte.b)}"></div>
       </div>
     </div>
     <div><p class="lbl-sm strong">Quem paga cada conta</p>
@@ -1686,7 +1686,7 @@ function pAjustes() {
     <section class="card s6 t12">${cardHead("canecas", "Pessoas da casa", "", "casa")}
       <dl class="kv">${D().membros.map((m) => `<dt><span class="chip">${avatar(m.vaga, true)}${esc(nome(m.vaga, { voce: false }))}${m.user_id === meId() ? " (você)" : ""}</span></dt><dd>${m.user_id ? "Conectada" : "Aguardando convite"} ${m.user_id === meId() || !m.user_id ? `<button class="link-btn" data-act="apelido" data-vaga="${m.vaga}">renomear</button>` : ""}</dd>`).join("")}</dl>
       ${b && !b.user_id ? `<div class="banner"><div class="grow">Código de convite: <strong class="num" style="font-size:17px;letter-spacing:.08em">${esc(casa?.codigo_convite)}</strong><br><span class="muted" style="font-size:13px">A outra pessoa cria a conta, escolhe “Entrar com convite” e digita este código.</span></div><button class="btn btn-sm" data-act="copiar" data-v="${esc(casa?.codigo_convite)}">${ic("copiar", "sm")}Copiar</button></div><button class="link-btn" data-act="novo-codigo" style="align-self:flex-start">Gerar outro código</button>` : ""}
-      <dl class="kv"><dt>Divisão</dt><dd>50/50 com acerto no fim do mês</dd></dl>
+      <dl class="kv"><dt>Divisão</dt><dd>${textoDivisao(divisaoCasa(D()))}, com acerto no fim do mês <button class="link-btn" data-act="divisao">ajustar</button></dd></dl>
       <div><button class="btn btn-danger btn-sm" data-act="ask-sair-casa">${ic("sair", "sm")}Sair da casa</button></div>
       <div class="confirm" id="confirmSairCasa" hidden><p>${sozinho
         ? "Só você está nesta casa. Ao sair, a casa é apagada com as contas, cartões, metas e acertos lançados nela. Seus investimentos, dia a dia e bancos conectados continuam com você. Depois você pode criar outra casa ou entrar com um código de convite."
@@ -1813,7 +1813,7 @@ const fText = (name, label, val = "", attrs = "", hint = "") =>
 const fDia = (name, label, val = "") =>
   `<div class="field"><label for="f_${name}">${label}</label><input class="inp" id="f_${name}" name="${name}" type="number" inputmode="numeric" min="1" max="31" value="${esc(val)}"></div>`;
 const fPagador = (val) =>
-  `<div class="field"><span class="lab">Quem paga</span><div class="choice">${["a", "b"].map((v) => `<label><input type="radio" name="pagador" value="${v}" ${val === v ? "checked" : ""}><span>${esc(nome(v))}</span></label>`).join("")}</div><span class="hint">O acerto no fim do mês divide tudo meio a meio.</span></div>`;
+  `<div class="field"><span class="lab">Quem paga</span><div class="choice">${["a", "b"].map((v) => `<label><input type="radio" name="pagador" value="${v}" ${val === v ? "checked" : ""}><span>${esc(nome(v))}</span></label>`).join("")}</div><span class="hint">O acerto no fim do mês divide tudo pela divisão da casa (${textoDivisao(divisaoCasa(D()), true)}).</span></div>`;
 // Escolha Da casa / Pessoal. Sem padrão quando não dá para saber (evita expor conta pessoal por engano).
 // Na edição, só quem lançou pode trocar (o banco também só deixa o dono tornar pessoal).
 const nomeOutra = () => (D()?.membros.some((m) => m.vaga === outra()) ? nome(outra(), { voce: false }) : "A outra pessoa da casa");
@@ -2119,6 +2119,109 @@ function formFatura(id) {
     guard(async (fd, _a, form) => act(() => api.valorMes("cartoes", c.id, ym, readMoney(fd, form, "fatura")), "Fatura salva.")));
 }
 
+/* ---- divisão da casa: igual, pela renda ou personalizada ---- */
+// Texto curto do ponto de vista de quem vê: "Igual · 50/50", "Pela renda · você 60% / Isis 40%".
+function textoDivisao(div, curto = false) {
+  const eu = minhaVaga() === "b" ? "b" : "a";
+  const meu = Math.round((eu === "a" ? div.a : 1 - div.a) * 100);
+  const nomeModo = { igual: "Igual", renda: "Pela renda", pers: "Personalizada" }[div.modo] || "Igual";
+  const partes = `você ${meu}% · ${nome(eu === "a" ? "b" : "a", { voce: false })} ${100 - meu}%`;
+  if (curto) return div.modo === "igual" ? "meio a meio" : partes;
+  return `${nomeModo}${div.semRenda ? " (falta renda, 50/50)" : ""} · ${esc(partes)}`;
+}
+
+function formDivisao() {
+  const eu = minhaVaga() === "b" ? "b" : "a";
+  const ela = eu === "a" ? "b" : "a";
+  const atual = lerDivisao(D().casa?.divisao);
+  const pctPers = atual.modo === "pers" ? atual.pctA : 50;
+  let modo = atual.modo;
+  // Percentual da vaga a em cada modo; o personalizado guarda o último valor arrastado.
+  let pers = pctPers;
+  const pctAde = (m) => (m === "pers" ? pers : Math.round(fracaoDe(D(), m === "renda" ? { modo: "renda" } : { modo: "igual" }).a * 1000) / 10);
+  const corpo = `<div class="seg-ctl wide div-modos" role="group" aria-label="Como dividir">${[
+      ["igual", "Igual", "pessoas"], ["renda", "Pela renda", "carteira"], ["pers", "Personalizada", "ajustes"]]
+      .map(([v, l, i]) => `<button type="button" data-modo="${v}" aria-pressed="${modo === v}">${ic(i, "sm")}${l}</button>`).join("")}</div>
+    <div class="div-cab"><span><i class="dot ${eu}"></i>Você paga</span><span>${esc(nome(ela, { voce: false }))} paga<i class="dot ${ela}"></i></span></div>
+    <div class="div-barra" id="divBarra">
+      <div class="div-seg ${eu}" id="divEu"><b id="divEuP"></b></div>
+      <div class="div-seg ${ela}" id="divEla"><b id="divElaP"></b></div>
+      <button type="button" class="div-alca" id="divAlca" role="slider" aria-label="Quanto você paga" aria-valuemin="1" aria-valuemax="99"></button>
+    </div>
+    <p class="hint" id="divNota"></p>
+    <input type="hidden" name="divisao" id="divValor">`;
+  openSheet("Como dividir os gastos", corpo,
+    `<button type="button" class="btn" data-close>Cancelar</button><button type="submit" class="btn btn-primary">Salvar</button>`,
+    guard(async (fd) => {
+      const v = String(fd.get("divisao") || "igual");
+      return act(() => api.salvar("casas", { divisao: v }, D().casa.id), "Divisão salva. Vale para o acerto e o saldo dos dois.");
+    }));
+  const d = sheet();
+  const barra = d.querySelector("#divBarra");
+  const alca = d.querySelector("#divAlca");
+  const nota = d.querySelector("#divNota");
+  const pinta = () => {
+    const pA = pctAde(modo);
+    const meu = eu === "a" ? pA : 100 - pA;
+    const fmt = (x) => `${Number.isInteger(x) ? x : x.toFixed(1).replace(".", ",")}%`;
+    d.querySelector("#divEu").style.width = `${meu}%`;
+    d.querySelector("#divEla").style.width = `${100 - meu}%`;
+    d.querySelector("#divEuP").textContent = meu >= 8 ? fmt(meu) : "";
+    d.querySelector("#divElaP").textContent = 100 - meu >= 8 ? fmt(Math.round((100 - meu) * 10) / 10) : "";
+    alca.style.left = `${meu}%`;
+    alca.setAttribute("aria-valuenow", String(Math.round(meu)));
+    alca.setAttribute("aria-valuetext", `Você ${fmt(meu)}, ${nome(ela, { voce: false })} ${fmt(Math.round((100 - meu) * 10) / 10)}`);
+    d.querySelectorAll("[data-modo]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.modo === modo)));
+    d.querySelector("#divValor").value = modo === "pers" ? `a:${pers}` : modo;
+    const semRenda = modo === "renda" && fracaoDe(D(), { modo: "renda" }).semRenda;
+    nota.innerHTML = modo === "igual"
+      ? "Cada um paga metade das contas da casa."
+      : modo === "renda"
+        ? semRenda
+          ? `Falta a renda ${D().membros.some((m) => m.vaga === eu && m.renda > 0) ? `de ${esc(nome(ela, { voce: false }))}` : "de vocês"} em <b>Nossa casa → Renda do casal</b>. Até lá a divisão fica 50/50.`
+          : "Cada um paga na proporção da própria renda. Se a renda mudar, a divisão acompanha."
+        : "Arraste a barrinha do meio ou use as setas do teclado.";
+    nota.insertAdjacentHTML("beforeend", " Vale para o acerto de todos os meses e para o Saldo previsto dos dois.");
+  };
+  d.querySelectorAll("[data-modo]").forEach((b) => (b.onclick = () => {
+    if (b.dataset.modo === "pers" && modo !== "pers" && atual.modo !== "pers") pers = Math.round(pctAde(modo));
+    modo = b.dataset.modo;
+    pinta();
+
+  }));
+  // Arrastar: a posição vira o "meu" percentual; guarda o da vaga a.
+  const definir = (meu) => {
+    meu = Math.min(99, Math.max(1, Math.round(meu)));
+    modo = "pers";
+    pers = eu === "a" ? meu : 100 - meu;
+    pinta();
+
+  };
+  const daPosicao = (x) => {
+    const r = barra.getBoundingClientRect();
+    definir(((x - r.left) / r.width) * 100);
+  };
+  barra.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    barra.setPointerCapture(e.pointerId);
+    barra.classList.add("arrastando");
+    daPosicao(e.clientX);
+    alca.focus({ preventScroll: true });
+  });
+  barra.addEventListener("pointermove", (e) => { if (barra.hasPointerCapture(e.pointerId)) daPosicao(e.clientX); });
+  const soltar = (e) => { if (barra.hasPointerCapture?.(e.pointerId)) barra.releasePointerCapture(e.pointerId); barra.classList.remove("arrastando"); };
+  barra.addEventListener("pointerup", soltar);
+  barra.addEventListener("pointercancel", soltar);
+  alca.addEventListener("keydown", (e) => {
+    const meu = Number(alca.getAttribute("aria-valuenow"));
+    const passo = e.shiftKey ? 10 : 1;
+    const mapa = { ArrowLeft: -passo, ArrowDown: -passo, ArrowRight: passo, ArrowUp: passo, PageDown: -10, PageUp: 10 };
+    if (e.key in mapa) { e.preventDefault(); definir(meu + mapa[e.key]); }
+    else if (e.key === "Home") { e.preventDefault(); definir(1); }
+    else if (e.key === "End") { e.preventDefault(); definir(99); }
+  });
+  pinta();
+}
 function formRenda(vaga) {
   const m = D().membros.find((x) => x.vaga === vaga);
   openSheet(`Renda de ${esc(nome(vaga, { voce: false }))}`, `${fMoney("renda", "Renda mensal líquida", m?.renda, "O valor que cai na conta por mês. Os dois veem este número.")}`,
@@ -2457,6 +2560,7 @@ document.addEventListener("click", async (e) => {
     case "edit-cartao": return formCartao({ id });
     case "fatura": return formFatura(id);
     case "renda": return formRenda(t.dataset.vaga);
+    case "divisao": return formDivisao();
     case "apelido": return formApelido(t.dataset.vaga);
     case "diadia": return formDiaDia();
     case "nova-meta": return formMeta();

@@ -2983,9 +2983,12 @@ dialog.novos-cc {
 .ncc-seg button {
   flex: 1 1 0;
   min-width: 0;
-  padding-left: 6px;
-  padding-right: 6px;
+  padding-left: 4px;
+  padding-right: 4px;
   white-space: nowrap;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ncc-somar {
   align-items: flex-start;
@@ -3018,4 +3021,101 @@ dialog.novos-cc {
   .ncc-conta {
     display: none;
   }
+}
+
+/* ---- divisão da casa: igual / pela renda / personalizada ---- */
+.div-linha {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--text-3);
+}
+.seg-ctl.wide.div-modos {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+.div-modos button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 9px 6px;
+  white-space: nowrap;
+  font-size: 14px;
+}
+.div-cab {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 550;
+  color: var(--text-2);
+  margin-bottom: 8px;
+}
+.div-cab span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.div-barra {
+  position: relative;
+  display: flex;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--surface-3);
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.div-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 15px;
+  transition: width 0.18s ease;
+}
+.div-barra.arrastando .div-seg,
+.div-barra.arrastando .div-alca {
+  transition: none;
+}
+.div-seg:first-child {
+  border-radius: 14px 0 0 14px;
+}
+.div-seg:nth-child(2) {
+  border-radius: 0 14px 14px 0;
+}
+.div-seg.a {
+  background: var(--pa);
+}
+.div-seg.b {
+  background: var(--pb);
+}
+.div-alca {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 30px;
+  margin: -15px 0 0 -5px;
+  padding: 0;
+  border: 3px solid var(--surface);
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  cursor: ew-resize;
+  transition: left 0.18s ease;
+}
+.div-alca::before {
+  content: "";
+  position: absolute;
+  inset: -12px -14px;
+}
+.div-alca:focus-visible {
+  outline: 2px solid var(--neon, #ccff00);
+  outline-offset: 3px;
+}
+#divNota {
+  margin-top: 12px;
 }
