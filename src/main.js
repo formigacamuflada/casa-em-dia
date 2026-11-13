@@ -2227,12 +2227,24 @@ function abrirNovosCartoes({ todos = false } = {}) {
     document.body.append(d);
   }
   const escolha = new Map(lista.map((c) => [c.id, ign.has(c.id) ? "nao" : "pessoal"]));
+  const ROTULO = { pessoal: "Pessoal", casa: "Da casa", nao: "Não adicionar" };
+  // Rosto do cartão como ele vai ficar no app (cor pelo banco, muda ao digitar e ao escolher).
+  const rosto = (c, banco) => faceCartao({
+    banco: banco || c.nome, apelido: c.nome, final: c.final, bandeira: c.bandeira,
+    cor: corDoBanco(banco) || corDoBanco(c.nome) || "grafite", vencimento: diaDe(c.vencimento),
+    limite: c.limite, faturas: c.fatura != null ? { [S.month]: c.fatura } : {}, escopo: escolha.get(c.id) === "casa" ? "casa" : "pessoal",
+  }, { status: ROTULO[escolha.get(c.id)] });
   const linha = (c) => `<div class="ncc-item" data-id="${esc(c.id)}">
-      <div class="ncc-top"><span class="ncc-ic">${ic("cartao", "sm")}</span><div class="ncc-nome"><b>${esc(c.nome)}</b>${c.final ? ` <span class="faint">•••• ${esc(c.final)}</span>` : ""}${c.bandeira ? ` <span class="faint">· ${esc(c.bandeira)}</span>` : ""}
-        <small>${c.fatura != null ? `Fatura atual ${brl(c.fatura)}` : "Sem fatura"}${c.vencimento ? ` · vence ${dataBR(c.vencimento)}` : ""}${c.limite != null ? ` · limite ${brl(c.limite)}` : ""}</small></div></div>
-      <div class="ncc-ctl"><label class="ncc-banco"><span>Banco</span><input class="inp" name="banco" value="${esc(bancoDoImportado(c))}" placeholder="Ex.: Inter" maxlength="40"></label>
-        <div class="seg-ctl ncc-seg" role="group" aria-label="Como adicionar ${esc(c.nome)}">${[["pessoal", "Pessoal"], ["casa", "Da casa"], ["nao", "Não adicionar"]].map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${escolha.get(c.id) === v}">${l}</button>`).join("")}</div></div>
+      <div class="ncc-face">${rosto(c, bancoDoImportado(c))}</div>
+      <div class="ncc-info"><div class="ncc-nome"><b>${esc(c.nome)}</b>${c.final ? ` <span class="faint">•••• ${esc(c.final)}</span>` : ""}${c.bandeira ? ` <span class="faint">· ${esc(c.bandeira)}</span>` : ""}
+        <small>${c.fatura != null ? `Fatura atual ${brl(c.fatura)}` : "Sem fatura"}${c.vencimento ? ` · vence ${dataBR(c.vencimento)}` : ""}${c.limite != null ? ` · limite ${brl(c.limite)}` : ""}</small></div>
+        <label class="ncc-banco"><span>Banco</span><input class="inp" name="banco" value="${esc(bancoDoImportado(c))}" placeholder="Ex.: Inter" maxlength="40"></label>
+        <div class="seg-ctl ncc-seg" role="group" aria-label="Como adicionar ${esc(c.nome)}">${Object.entries(ROTULO).map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${escolha.get(c.id) === v}">${l}</button>`).join("")}</div></div>
     </div>`;
+  const redesenhar = (el) => {
+    const c = lista.find((x) => x.id === el.dataset.id);
+    el.querySelector(".ncc-face").innerHTML = rosto(c, el.querySelector("input[name=banco]").value.trim());
+  };
   d.innerHTML = `<div class="guia-in">
     <div class="guia-head"><div><p class="guia-kicker">Cartões encontrados no Open Finance</p><h2 id="novosCCt">Quer acompanhar estes cartões no app?</h2></div>
       <button type="button" class="icon-btn" data-n="tarde" aria-label="Fechar (ver mais tarde)">${ic("x")}</button></div>
@@ -2256,6 +2268,7 @@ function abrirNovosCartoes({ todos = false } = {}) {
       const id = seg.closest(".ncc-item").dataset.id;
       escolha.set(id, seg.dataset.v);
       seg.parentElement.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b === seg)));
+      redesenhar(seg.closest(".ncc-item"));
       return atualizar();
     }
     const b = ev.target.closest("[data-n]");
@@ -2291,6 +2304,9 @@ function abrirNovosCartoes({ todos = false } = {}) {
       b.disabled = false;
       toast(erroMsg(err), true);
     }
+  };
+  d.oninput = (ev) => {
+    if (ev.target.matches("input[name=banco]")) redesenhar(ev.target.closest(".ncc-item"));
   };
   atualizar();
   if (!d.open) d.showModal();
