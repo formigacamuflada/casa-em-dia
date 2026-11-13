@@ -1296,7 +1296,7 @@ function blocoMercadoResumo(span = "s4 m12 t12") {
 /* ------------------------------------------------------------------ páginas */
 function pInicio() {
   return `${bannerConvite()}
-  <div class="dash">${blocoSobra("w2")}${blocoVencimentos("w1 tall")}${blocoAcerto("w1")}${blocoCartoesResumo("w1")}${blocoMoradia("w1")}${blocoMetas("w1")}${blocoMercadoResumo("w2")}</div>`;
+  <div class="dash">${blocoSobra("w3")}${blocoAcerto("w1")}${blocoMoradia("w1")}${blocoVencimentos("w1")}${blocoMetas("w1")}${blocoMercadoResumo("w2")}</div>`;
 }
 
 function bannerConvite() {

@@ -521,6 +521,9 @@ img.ill3d {
 .dash > .w1 {
   grid-column: span 1;
 }
+.dash > .w3 {
+  grid-column: 1 / -1;
+}
 
 /* ---- saldo previsto ---- */
 .hero {
@@ -1628,6 +1631,12 @@ dialog.sheet {
   }
   .dash > * {
     grid-column: 1 / -1 !important;
+    order: 1;
+  }
+  /* No celular, Contas a pagar continua logo abaixo do saldo. */
+  .dash > .c-saldo,
+  .dash > .c-contas {
+    order: 0;
   }
   .card {
     padding: 18px;
