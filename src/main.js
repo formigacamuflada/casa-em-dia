@@ -2351,7 +2351,25 @@ async function conectarBanco() {
           toast(erroMsg(err), true);
         }
       },
-      onError: (err) => toast(`A conexão não foi concluída: ${err?.message || "tente de novo"}`, true),
+      onError: async (err) => {
+        console.error("Pluggy Connect:", err);
+        // Se a Pluggy disser que a conexão já existe e mandar o item, liga ele a esta conta
+        // (o servidor recusa se a conexão for de outra pessoa).
+        const existente = err?.data?.item?.id;
+        if (existente && !D().itens.some((i) => i.item_id === existente)) {
+          try {
+            await api.addItem(existente, err.data.item.connector?.name || "Banco");
+            toast("Essa conexão já existia na Pluggy; ela foi ligada à sua conta. Buscando os dados…");
+            return sincronizarAgora();
+          } catch (e) {
+            console.error(e);
+          }
+        }
+        const msg = String(err?.message || "");
+        toast(/ALREADY_EXISTS/i.test(msg)
+          ? "A Pluggy diz que essa conta Meu Pluggy já está conectada. Confira se você entrou no meu.pluggy.ai com a sua própria conta e tente de novo."
+          : `A conexão não foi concluída: ${msg || "tente de novo"}`, true);
+      },
     });
     await pc.init();
   } catch (err) {

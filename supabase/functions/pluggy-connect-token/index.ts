@@ -38,7 +38,10 @@ Deno.serve(async (req) => {
     const ct = await http(`${PLUGGY}/connect_token`, {
       method: "POST",
       headers: { "content-type": "application/json", "X-API-KEY": auth.apiKey },
-      body: JSON.stringify({ itemId, options: { clientUserId: who.user.id, avoidDuplicates: true, webhookUrl: await webhookUrl() } }),
+      // avoidDuplicates fica desligado: com o conector MeuPluggy a Pluggy recusava a conta Meu Pluggy
+      // da segunda pessoa da casa (ITEM_USER_ALREADY_EXISTS). Conexão repetida da mesma pessoa é
+      // tratada na sincronização (contas e investimentos repetidos entram uma vez) e no app.
+      body: JSON.stringify({ itemId, options: { clientUserId: who.user.id, avoidDuplicates: false, webhookUrl: await webhookUrl() } }),
     });
     return json({ ok: true, accessToken: ct.accessToken, webhookUrl: await webhookUrl() });
   } catch (e) {

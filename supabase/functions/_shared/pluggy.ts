@@ -97,6 +97,10 @@ export async function sincronizar(itemIds: string[], userId: string) {
   }
   const nomeCat = (id: string | null | undefined) => (id && categorias.get(id)?.nome) || null;
   const itensInfo: any[] = [];
+  // A mesma conta Meu Pluggy conectada duas vezes gera duas conexões com as mesmas contas:
+  // conta, cartão e investimento repetidos (mesmo tipo, número e nome) só entram uma vez.
+  const contasVistas = new Set<string>();
+  const investVistos = new Set<string>();
 
   for (const itemId of itemIds) {
     let item: any;
@@ -120,6 +124,9 @@ export async function sincronizar(itemIds: string[], userId: string) {
       const page = await pluggy("accounts", { itemId });
       for (const a of page.results || []) {
         const nome = a.marketingName || a.name;
+        const chave = `${a.type}|${a.number || ""}|${nome}`;
+        if (contasVistas.has(chave)) continue;
+        contasVistas.add(chave);
         if (a.type === "CREDIT") {
           const c = a.creditData || {};
           cartoes.push({
@@ -180,6 +187,9 @@ export async function sincronizar(itemIds: string[], userId: string) {
         const r = await pluggy("investments", { itemId, pageSize: 500, page: p });
         for (const v of r.results || []) {
           if (v.status === "TOTAL_WITHDRAWAL") continue;
+          const chaveInv = `${v.code || v.isin || v.name}|${v.number || ""}|${v.issueDate || v.purchaseDate || ""}|${v.balance}`;
+          if (investVistos.has(chaveInv)) continue;
+          investVistos.add(chaveInv);
           const rt = await rentab12(v, indexadores);
           investimentos.push({
             id: v.id, conexao, nome: v.name, classe: CLASSE[v.subtype] || TIPO[v.type] || v.type,
