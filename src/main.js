@@ -401,6 +401,11 @@ async function start() {
   refreshMercado();
   // Guia do Meu Pluggy: abre sozinho a cada abertura do app até a pessoa marcar
   // "Não mostrar novamente". "Ver mais tarde" = volta na próxima abertura.
+  // Cartões do Open Finance ainda não escolhidos: oferece uma vez por abertura do app
+  // (depois do guia/tutorial, se estiverem abertos).
+  let jaOfertou = false;
+  try { jaOfertou = sessionStorage.getItem("casa-ofertou-cartoes") === "1"; } catch { /* sem armazenamento */ }
+  if (!jaOfertou) setTimeout(() => oferecerNovosCartoes(), 4000);
   if (!guiaDesligado(S.session?.user)) {
     setTimeout(() => {
       if (S.data && !guiaDesligado(S.session?.user) && !document.querySelector("dialog[open]")) abrirGuia();
@@ -2312,8 +2317,17 @@ function abrirNovosCartoes({ todos = false } = {}) {
   if (!d.open) d.showModal();
 }
 // Depois de conectar ou sincronizar: oferece os cartões novos (uma vez por sincronização).
-function oferecerNovosCartoes() {
-  if (!cartoesPendentes().length || document.querySelector("dialog[open]") || tourAberto()) return;
+// Se outra janela estiver aberta (guia do Meu Pluggy, tutorial, formulário), espera ela fechar
+// em vez de desistir — antes a oferta se perdia quando o guia ou o tutorial abria junto.
+let ofertaTimer = null;
+function oferecerNovosCartoes(tentativas = 60) {
+  clearTimeout(ofertaTimer);
+  if (!S.data || D().semCasa || !cartoesPendentes().length) return;
+  if (document.querySelector("dialog[open]") || tourAberto() || S.syncing) {
+    if (tentativas > 0) ofertaTimer = setTimeout(() => oferecerNovosCartoes(tentativas - 1), 2000);
+    return;
+  }
+  try { sessionStorage.setItem("casa-ofertou-cartoes", "1"); } catch { /* sem armazenamento */ }
   abrirNovosCartoes();
 }
 
