@@ -597,7 +597,7 @@ function renderOnboarding() {
 const NAV = [
   ["inicio", "Visão geral", "Início", "inicio"],
   ["casa", "Nossa casa", "Casa", "casa"],
-  ["minhas", "Minhas contas", "Minhas", "carteira"],
+  ["minhas", "Minhas contas", "Contas", "carteira"],
   ["cartoes", "Cartões", "Cartões", "cartao"],
   ["investimentos", "Investimentos", "Investir", "invest"],
 ];
@@ -666,12 +666,15 @@ function route() {
 
 /* ---- tutorial de cada aba (src/tour.js) ---- */
 let tourTimer = null;
+let tourPedido = null; // aba cujo tutorial foi pedido em Ajustes → Tutoriais
 function agendarTour(rota, ms) {
   clearTimeout(tourTimer);
   tourTimer = setTimeout(() => {
+    const pedido = tourPedido === rota;
+    tourPedido = null;
     if (S.route !== rota || !S.data || D().semCasa) return;
     if (document.querySelector("dialog[open]") || tourAberto()) return; // ex.: guia do Meu Pluggy aberto
-    if (deveMostrar(S.session?.user, rota)) abrirTourAqui();
+    if (pedido || deveMostrar(S.session?.user, rota)) abrirTourAqui();
   }, ms);
 }
 async function salvarTourConta(tour) {
@@ -690,8 +693,9 @@ function abrirTourDe(rota) {
   if (!TOURS[rota]) return;
   clearTimeout(tourTimer);
   if (S.route === rota) return abrirTourAqui();
+  // A troca de aba agenda o tutorial dela (agendarTour); este pedido passa na frente de "já visto".
+  tourPedido = rota;
   location.hash = rota;
-  tourTimer = setTimeout(() => { if (S.route === rota) abrirTourAqui(); }, 1300);
 }
 
 /* ------------------------------------------------------- animação de entrada
@@ -774,7 +778,7 @@ function render() {
     a.dataset.route === S.route ? a.setAttribute("aria-current", "page") : a.removeAttribute("aria-current"),
   );
   const [mm, aa] = mesNome(S.month).split(" de ");
-  $("#monthLabel").innerHTML = `${esc(mm)} <span>${esc(aa || "")}</span>`;
+  $("#monthLabel").innerHTML = `<b class="ml-longo">${esc(mm)}</b><b class="ml-curto" aria-hidden="true">${esc(mm.slice(0, 3))}</b> <span>${esc(aa || "")}</span>`;
   $("#hojeBtn").hidden = S.month === curYM();
   const me = eu();
   const junta = D().membros.every((m) => m.user_id);

@@ -81,7 +81,7 @@ export const TOURS = {
       { alvo: T("Meus valores"), titulo: "Seus valores", texto: "Sua renda (os dois veem) e o orçamento do dia a dia (só você). Os dois alimentam o Saldo previsto." },
       { alvo: T("Bancos (Meu Pluggy)"), titulo: "Conectar bancos", texto: "<b>Conectar banco → MeuPluggy</b> e entre com o <b>seu</b> login do meu.pluggy.ai. <b>Como conectar</b> abre o passo a passo com telas." },
       { alvo: T("Bancos (Meu Pluggy)"), titulo: "Sincronizar e Avançado", texto: "<b>Sincronizar agora</b> traz o que o Meu Pluggy já buscou (ele atualiza os bancos 1× por dia). <b>Avançado → Usar Item ID</b> é só para suporte." },
-      { alvo: T("Tutoriais"), titulo: "Rever os tutoriais", texto: "Abra o passo a passo de qualquer aba quando quiser (no computador também pelo <b>?</b> no topo). Aqui você liga ou desliga a abertura automática." },
+      { alvo: T("Tutoriais"), titulo: "Rever os tutoriais", texto: "Abra o passo a passo de qualquer aba quando quiser (também pelo <b>?</b> no topo de cada aba). Aqui você liga ou desliga a abertura automática." },
       { alvo: T("Aparência"), titulo: "Aparência", texto: "Automático segue o claro/escuro do celular ou do computador; ou fixe Claro ou Escuro. Vale só neste aparelho." },
     ],
   },

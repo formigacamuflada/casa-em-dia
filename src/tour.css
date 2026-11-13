@@ -127,12 +127,7 @@
   }
 }
 
-/* No celular a barra do topo não tem espaço para o "?": o tutorial fica em Ajustes → Tutoriais. */
-@media (max-width: 480px) {
-  .top [data-act="tour"] {
-    display: none;
-  }
-}
+
 .tours-lista {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));

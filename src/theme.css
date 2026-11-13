@@ -290,6 +290,12 @@ a {
   color: var(--text-3);
   font-weight: 500;
 }
+.month-label b {
+  font-weight: inherit;
+}
+.month-label .ml-curto {
+  display: none;
+}
 main {
   padding: 16px 24px 56px 16px;
 }
@@ -1666,7 +1672,9 @@ dialog.sheet {
   .month-label {
     font-size: 18px;
     margin-left: 2px;
+    white-space: nowrap;
   }
+
   .top-in {
     padding: 0 8px 0 4px;
   }
@@ -3118,4 +3126,19 @@ dialog.novos-cc {
 }
 #divNota {
   margin-top: 12px;
+}
+
+/* Celular estreito: "Nov 2026" no topo para caber o "?" do tutorial. */
+@media (max-width: 480px) {
+  .month-label .ml-longo {
+    display: none;
+  }
+  .month-label .ml-curto {
+    display: inline;
+  }
+}
+@media (max-width: 359px) {
+  .month-label span {
+    display: none;
+  }
 }
